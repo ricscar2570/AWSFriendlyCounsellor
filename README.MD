@@ -30,9 +30,9 @@ AWS Friendly Counsellor è una **web application basata su Machine Learning** ch
 ---
 
 ## **🚀 Architettura del Progetto**
-
+```
 AWS-Friendly-Counsellor/ │── backend/ │ ├── lambda_function.py # Funzione AWS Lambda principale │ ├── lambda_demo_function.py # Endpoint API per demo interattiva │ ├── models/ │ │ ├── sector_classification_model.pkl # ML: Classificazione Settore │ │ ├── cost_prediction_model.pkl # ML: Predizione Costi AWS │ │ ├── service_recommendation_model.pkl # ML: Suggerimento Servizi AWS │── frontend/ │ ├── src/ │ │ ├── components/ │ │ │ ├── ResultsSection.js # Visualizzazione risultati │ │ │ ├── ThemeToggle.js # Dark Mode │ │ ├── pages/ │ │ │ ├── LandingPage.js # Landing Page Promozionale │ │ │ ├── Demo.js # Demo Interattiva │ │ ├── styles/ │ │ │ ├── App.css # Stili principali │ ├── public/ │ │ ├── index.html # Punto di ingresso React │── api_gateway/ │ ├── api_config.json # Configurazione AWS API Gateway │── docs/ │ ├── README.md # Documentazione │ ├── User_Guide.md # Guida utente │── test/ │ ├── test_lambda.py # Test unitari AWS Lambda │ ├── test_api.py # Test API Gateway
-
+```
 
 ---
 
