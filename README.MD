@@ -1,147 +1,131 @@
-# 🌟 **AWS Friendly Counsellor** 🌟
+# 🌍 AWS Friendly Counsellor
+🚀 **Il tuo consulente intelligente per ottimizzare AWS e ridurre i costi!**
 
-![AWS Friendly Counsellor](https://github.com/ricscar2570/portfolio/blob/main/AWSFriendlyCounsellor/Senza%20titolo.jpg)
-
-## 📝 **Descrizione**
-**AWS Friendly Counsellor** è un'applicazione progettata per guidare **startup**, **piccole imprese** e **utenti meno esperti** nella pianificazione e utilizzo dei servizi **AWS**. Con un'interfaccia intuitiva e raccomandazioni proattive, l'app aiuta a esplorare le possibilità offerte da AWS in modo semplice, educativo e divertente.
+AWS Friendly Counsellor è una **web application basata su Machine Learning** che analizza le esigenze aziendali e fornisce **raccomandazioni personalizzate sui servizi AWS**, stimando i costi e suggerendo ottimizzazioni.
 
 ---
 
-## 🚀 **Caratteristiche Principali**
-
-### 🎯 **1. Raccomandazioni Proattive Basate su Machine Learning**
-- 🔮 **Modelli predittivi** suggeriscono i servizi AWS più adatti ai tuoi bisogni.
-- 💰 **Stime dei costi** dettagliate prima di implementare la tua infrastruttura.
-- 🏭 **Classificazione automatica del settore** basata sulla descrizione aziendale.
-
----
-
-### 📊 **2. Simulazioni Interattive**
-- 🌍 Simula i costi in **regioni AWS diverse**.
-- ⚙️ Esplora **configurazioni alternative** per ottimizzare i costi.
-
-| 🌍 **Regione**            | 💰 **Moltiplicatore Costo** | 📈 **Costo Simulato** |
-|---------------------------|----------------------------|------------------------|
-| US East (N. Virginia)     | 1.0                        | `$100`                |
-| EU (Ireland)              | 1.2                        | `$120`                |
-| Asia Pacific (Singapore)  | 1.5                        | `$150`                |
+## **🔹 Funzionalità Principali**
+✅ **Analisi AI del Settore Aziendale**: Identifica il settore della tua azienda in base alla descrizione.  
+✅ **Raccomandazione dei Servizi AWS**: Suggerisce i migliori servizi AWS per le tue esigenze.  
+✅ **Simulazione Costi AWS**: Stima il costo mensile dei servizi AWS selezionati.  
+✅ **Grafici Interattivi** 📊: Visualizza i costi e le ottimizzazioni con grafici chiari e intuitivi.  
+✅ **Gamification & Badge** 🏆: Ottieni badge in base alle ottimizzazioni effettuate.  
+✅ **Demo Interattiva** 🎮: Prova la piattaforma senza registrarti!  
+✅ **Dark Mode 🌙**: Interfaccia moderna con modalità chiara e scura.  
+✅ **GDPR Compliance** 🔐: Accesso e cancellazione dati utente, crittografia avanzata.  
 
 ---
 
-### 🏆 **3. Sistema di Gamification**
-- Guadagna **badge** per i tuoi progressi:
-  - 🏅 **Sector Guru**: Settore identificato correttamente.
-  - 🥇 **AWS Explorer**: Servizi raccomandati utilizzati.
-  - 🥈 **Data Driven**: Generazione di un report PDF.
-
-🎉 **Visualizzazione Badge:**
-
-🎯 Sector Guru 🛠️ AWS Explorer 📊 Data Driven
-
-
-
-
-### 🛍️ **4. Collegamenti con il Marketplace AWS**
-- Ogni servizio suggerito include un **link diretto** al Marketplace AWS per esplorare strumenti correlati.
-
-Esempio:
-- 🔗 [Amazon EC2 Marketplace](https://aws.amazon.com/marketplace/pp/prodview-ec2)
-- 🔗 [Amazon S3 Marketplace](https://aws.amazon.com/marketplace/pp/prodview-s3)
+## **🔧 Tecnologie Utilizzate**
+| **Componente** | **Tecnologia** |
+|---------------|---------------|
+| **Frontend** | React, Material UI, Tailwind CSS |
+| **Backend** | AWS Lambda, DynamoDB, API Gateway |
+| **Machine Learning** | XGBoost, Scikit-learn, Pandas |
+| **Database** | AWS DynamoDB (criptato con AWS KMS) |
+| **Sicurezza** | Token JWT, AWS Security Hub |
+| **Hosting** | AWS S3, CloudFront |
 
 ---
 
-### 🎓 **5. Educazione e Supporto**
-- Ogni servizio raccomandato include una **descrizione dettagliata**.
-- Genera report PDF per condividere i risultati con il tuo team.
+## **🚀 Architettura del Progetto**
+```
+AWS-Friendly-Counsellor/
+│── backend/
+│   ├── lambda_function.py               # Funzione AWS Lambda principale
+│   ├── lambda_demo_function.py          # Endpoint API per demo interattiva
+│   ├── models/
+│   │   ├── sector_classification_model.pkl  # ML: Classificazione Settore
+│   │   ├── cost_prediction_model.pkl       # ML: Predizione Costi AWS
+│   │   ├── service_recommendation_model.pkl # ML: Suggerimento Servizi AWS
+│
+│── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ResultsSection.js        # Visualizzazione risultati
+│   │   │   ├── ThemeToggle.js           # Dark Mode
+│   │   ├── pages/
+│   │   │   ├── LandingPage.js           # Landing Page Promozionale
+│   │   │   ├── Demo.js                  # Demo Interattiva
+│   │   ├── styles/
+│   │   │   ├── App.css                  # Stili principali
+│   ├── public/
+│   │   ├── index.html                    # Punto di ingresso React
+│
+│── api_gateway/
+│   ├── api_config.json                   # Configurazione AWS API Gateway
+│
+│── docs/
+│   ├── README.md                          # Documentazione
+│   ├── User_Guide.md                      # Guida utente
+│
+│── test/
+│   ├── test_lambda.py                     # Test unitari AWS Lambda
+│   ├── test_api.py                        # Test API Gateway
+
 
 ---
 
-### 🌈 **6. Grafici e Report Personalizzati**
-- Visualizza costi stimati e raccomandazioni in **grafici interattivi**.
-- Genera report PDF dettagliati per presentazioni interne.
-
-![Grafico di esempio](https://github.com/ricscar2570/portfolio/blob/main/AWSFriendlyCounsellor/Senza%20titolo2.jpg)
-
----
-
-## ⚙️ **Requisiti**
-
-### Backend:
-- **AWS DynamoDB**: Tabella `AWSFriendlyCounsellor`.
-- **Modelli ML pre-addestrati**:
-  - `service_recommendation_model.pkl`
-  - `cost_prediction_model.pkl`
-  - `sector_classification_model.pkl`
-- **AWS Lambda** per elaborazione delle richieste.
-
-### Frontend:
-- **React.js**: Per l'interfaccia interattiva.
-- **Material-UI**: Per componenti moderni e responsivi.
+## **📌 Come Funziona**
+1️⃣ **Inserisci i dati aziendali**: Descrizione, esigenze e traffico stimato.  
+2️⃣ **Ottieni raccomandazioni AWS**: L’AI suggerisce i servizi più adatti.  
+3️⃣ **Simula il costo AWS**: Confronta le opzioni di pricing.  
+4️⃣ **Guadagna Badge!** 🏆: Ottieni premi per ottimizzazioni avanzate.  
+5️⃣ **Scarica il report PDF** 📄: Condividi le raccomandazioni con il tuo team.  
 
 ---
 
-## 🚧 **Installazione**
+## **📥 Installazione**
+### **1️⃣ Clonare il repository**
+```bash
+git clone https://github.com/tuo-utente/AWS-Friendly-Counsellor.git
+cd AWS-Friendly-Counsellor
 
-### 🖥️ **Clona il Repository**
+2️⃣ Installare le dipendenze
 
-git clone https://github.com/your-repo/aws-friendly-counsellor.git
-cd aws-friendly-counsellor
-
-⚡ Backend
-
-    Configura DynamoDB:
-        Crea una tabella chiamata AWSFriendlyCounsellor.
-        Popola la tabella con i dati di fallback.
-
-    Carica i Modelli ML:
-        Aggiungi i file .pkl al bucket S3 o al Lambda Layer.
-
-    Distribuisci su AWS Lambda:
-        Configura una funzione Lambda con il codice backend.
-        Configura un endpoint API Gateway.
-
-🌐 Frontend
-
-    Installa le dipendenze:
-
+cd frontend
 npm install
 
-Configura l'URL dell'API Gateway:
+3️⃣ Avviare il Frontend
 
-    Modifica App.js e sostituisci <API_GATEWAY_URL> con l'URL.
+npm start
 
-Avvia il server di sviluppo:
+L'app sarà disponibile su: http://localhost:3000
+🔗 API Endpoints
+Metodo	Endpoint	Descrizione
+POST	/api/get-recommendations	Raccomanda servizi AWS per un’azienda
+GET	/api/demo-recommendations	Restituisce dati demo predefiniti
+POST	/api/simulate-cost	Simula il costo AWS per un’azienda
+GET	/api/get-user-data	Ottieni i dati dell'utente (GDPR)
+DELETE	/api/delete-user-data	Cancella i dati utente su richiesta
+📊 Grafici e Report
 
-    npm start
+L’app utilizza Plotly.js per generare grafici interattivi e analizzare:
 
-💡 Come Utilizzare
+    Distribuzione dei Costi AWS 📊
+    Confronto tra Servizi Raccomandati
+    Risparmio Potenziale sui Costi AWS
 
-    📝 Inserisci i dati:
-        Descrivi la tua azienda.
-        Specifica il tipo di necessità (es. calcolo intensivo o archiviazione).
-        Indica il traffico stimato.
+🛡 Sicurezza & GDPR
 
-    📊 Ricevi Raccomandazioni:
-        Visualizza i servizi AWS raccomandati con descrizioni dettagliate.
+🔒 Dati Protetti: AWS KMS per crittografia su DynamoDB.
+🔑 Accesso ai Dati: Gli utenti possono scaricare e cancellare i propri dati.
+🛠 Audit AWS Security Hub: Nessuna vulnerabilità critica rilevata.
+📢 Monetizzazione e Business Model
 
-    🌍 Simula Configurazioni:
-        Simula costi per regioni diverse.
+📌 Opzioni di Pricing:
+✅ Freemium: Versione base gratuita con funzioni avanzate a pagamento.
+✅ Abbonamento SaaS: Piani da $9.99/mese per startup e aziende.
+✅ Licenza Enterprise: Versione personalizzata per aziende su richiesta.
+🌟 Prossimi Passi
 
-    🏆 Ottieni Badge:
-        Guadagna badge in base ai tuoi progressi.
+🔹 Lanciare l’API su AWS: Distribuire il backend su Lambda e API Gateway.
+🔹 Ottimizzare il SEO della landing page: Per migliorare il traffico organico.
+🔹 Avviare campagne marketing: AWS Marketplace, LinkedIn, Google Ads.
+🔹 Ottenere primi clienti/tester: Far provare il prodotto a startup e PMI.
+📬 Contatti
 
-    📄 Genera Report PDF:
-        Scarica un report dettagliato per condividere i risultati.
-
-🔮 Sviluppi Futuri
-
-    🌟 Sfide personalizzate per il sistema di badge.
-    📈 Integrazione con AWS Cost Explorer.
-    🛠️ Simulazioni avanzate per resilienza e tempi di risposta.
-
-🤝 Contribuisci
-
-🎉 Sei il benvenuto! Apri un problema o invia una pull request per contribuire.
-📜 Licenza
-
-Questo progetto è distribuito sotto la licenza MIT. Consulta il file LICENSE per ulteriori dettagli.
+📧 Email: support@aws-friendly-counsellor.com
+🔗 Sito Web: aws-friendly-counsellor.com
+📌 LinkedIn: AWS Friendly Counsellor
