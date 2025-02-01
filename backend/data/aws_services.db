@@ -1,0 +1,30 @@
+import sqlite3
+
+# Creazione database
+conn = sqlite3.connect("aws_services.db")
+cursor = conn.cursor()
+
+# Creazione tabella dei servizi AWS
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS aws_services (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE,
+    cost REAL,
+    scalability TEXT,
+    reliability TEXT
+)
+""")
+
+# Inserimento dati sui servizi AWS
+services = [
+    ("EC2", 50, "Alta", "Critica"),
+    ("Lambda", 5, "Altissima", "Alta"),
+    ("RDS", 100, "Media", "Critica"),
+    ("S3", 10, "Altissima", "Alta"),
+]
+
+cursor.executemany("INSERT OR IGNORE INTO aws_services (name, cost, scalability, reliability) VALUES (?, ?, ?, ?)", services)
+
+conn.commit()
+conn.close()
+print("Database creato con successo!")
