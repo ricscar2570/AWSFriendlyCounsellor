@@ -1,0 +1,20 @@
+[
+  {
+    "service": "AWS Lambda",
+    "description": "Esegui codice senza provisioning di server.",
+    "bestFor": ["Serverless API", "Event-driven computing"],
+    "limits": "1M richieste/mese, 400.000 GB-secondi/mese",
+    "useCases": ["Web App Backend", "Elaborazione dati", "Automazioni"],
+    "pricingAfterLimit": "0.20$ per milione di richieste",
+    "link": "https://aws.amazon.com/free/"
+  },
+  {
+    "service": "Amazon S3",
+    "description": "Storage scalabile e sicuro per oggetti.",
+    "bestFor": ["File storage", "Hosting di siti statici"],
+    "limits": "5GB storage, 20.000 GET richieste/mese",
+    "useCases": ["Backup", "Distribuzione contenuti"],
+    "pricingAfterLimit": "0.023$/GB storage, 0.005$/1000 richieste",
+    "link": "https://aws.amazon.com/s3/"
+  }
+]
