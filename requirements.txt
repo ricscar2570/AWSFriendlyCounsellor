@@ -1,4 +1,6 @@
-boto3
-openai
-sqlite3
-pytest
+fastapi==0.95.0
+uvicorn==0.20.0
+boto3==1.26.0
+openai==0.27.0
+sqlite-utils==3.32
+pytest==7.2.2
