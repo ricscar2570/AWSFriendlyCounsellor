@@ -4,6 +4,9 @@ from utils.secrets_manager import get_openai_api_key
 from utils.region_mapping import get_region_name
 from utils.error_handler import handle_error
 from service_selector import select_best_aws_service
+from fastapi import FastAPI
+
+app = FastAPI()
 
 openai.api_key = get_openai_api_key()
 
