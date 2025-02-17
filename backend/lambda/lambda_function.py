@@ -1,4 +1,4 @@
- import json
+import json
 import openai
 from utils.secrets_manager import get_openai_api_key
 from utils.region_mapping import get_region_name
