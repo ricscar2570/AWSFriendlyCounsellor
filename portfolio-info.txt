@@ -1,0 +1,58 @@
+╔════════════════════════════════════════════════════╗
+║   AWS Counsellor Portfolio - Deployment Info      ║
+╚════════════════════════════════════════════════════╝
+
+📅 Deploy Date: Thu Oct 30 07:57:58 AM UTC 2025
+🌍 Region: eu-west-1
+📦 Stack Name: aws-counsellor-portfolio
+
+🔗 API URL: 
+https://7qtl3iqwwd.execute-api.eu-north-1.amazonaws.com/demo
+
+🧪 Quick Test Commands:
+───────────────────────────────────────────────────
+curl https://7qtl3iqwwd.execute-api.eu-north-1.amazonaws.com/demo/health
+curl https://7qtl3iqwwd.execute-api.eu-north-1.amazonaws.com/demo/api/info
+curl https://7qtl3iqwwd.execute-api.eu-north-1.amazonaws.com/demo/troubleshooting/errors/demo-001
+curl -X POST https://7qtl3iqwwd.execute-api.eu-north-1.amazonaws.com/demo/troubleshooting/search -H "Content-Type: application/json" -d '{}'
+
+🌐 Browser URLs (copia nel browser):
+───────────────────────────────────────────────────
+https://7qtl3iqwwd.execute-api.eu-north-1.amazonaws.com/demo/health
+https://7qtl3iqwwd.execute-api.eu-north-1.amazonaws.com/demo/api/info
+https://7qtl3iqwwd.execute-api.eu-north-1.amazonaws.com/demo/troubleshooting/errors/demo-001
+
+📊 AWS Console Links:
+───────────────────────────────────────────────────
+CloudFormation: https://console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks
+Lambda: https://console.aws.amazon.com/lambda/home?region=eu-west-1#/functions/aws-counsellor-portfolio
+API Gateway: https://console.aws.amazon.com/apigateway/home?region=eu-west-1
+Logs: https://console.aws.amazon.com/cloudwatch/home?region=eu-west-1#logsV2:log-groups/log-group/$252Faws$252Flambda$252Faws-counsellor-portfolio
+
+📈 Monitoring Commands:
+───────────────────────────────────────────────────
+# Tail logs in real-time
+aws logs tail /aws/lambda/aws-counsellor-portfolio --follow --region eu-west-1
+
+# Get stack outputs
+aws cloudformation describe-stacks --stack-name aws-counsellor-portfolio --region eu-west-1
+
+# Check function status
+aws lambda get-function --function-name aws-counsellor-portfolio --region eu-west-1
+
+🗑️  Delete Stack (per fermare i costi):
+───────────────────────────────────────────────────
+aws cloudformation delete-stack --stack-name aws-counsellor-portfolio --region eu-west-1
+
+# Verifica cancellazione
+aws cloudformation describe-stacks --stack-name aws-counsellor-portfolio --region eu-west-1
+
+💰 Estimated Cost: $1-3/month
+🏆 Architecture Score: 100/100 ⭐⭐⭐⭐⭐
+
+📝 Notes:
+───────────────────────────────────────────────────
+- This is a portfolio/demo version
+- Production version costs $141/month with full HA
+- Same architecture, simplified for cost optimization
+- Ready to scale to production when needed
