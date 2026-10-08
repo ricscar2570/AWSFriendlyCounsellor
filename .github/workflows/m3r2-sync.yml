@@ -52,7 +52,7 @@ jobs:
       - name: Verify reconstructed app
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           grep -q 'webVersion: "M3-R.2"' app/web-config.js
           grep -q 'Contract 1.13.0' app/js/views.js
           grep -q 'Cost Explorer/CUR' app/README.md
@@ -82,3 +82,5 @@ jobs:
 # retry-after-payload-repair
 
 # retry-after-verify-fix
+
+# retry-with-trace
