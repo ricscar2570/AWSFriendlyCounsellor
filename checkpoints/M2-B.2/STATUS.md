@@ -20,46 +20,47 @@ Closed defects:
 7. incomplete PKCE callback error/expiry lifecycle;
 8. service-worker caching of OAuth query-bearing navigations;
 9. pagination runtime used queryParams() without importing it;
-10. dashboard labels could imply global totals/latest values when only a page/sample was loaded.
+10. dashboard labels could imply global totals/latest values when only a page/sample was loaded;
+11. remote module-import regression discovered during synchronization and closed before final freeze.
 
 Additional remediation:
 - demo mode now exercises cursor pagination;
 - dashboard marks loaded counts with + when more data exists;
 - project edit fields are required client-side;
-- remote Pages CI now checks JS syntax, pagination import, PKCE age bound, service-worker OAuth no-store behavior, report print sandbox, demo pagination and an independently verified Terraform ZIP.
+- browser modules are parsed explicitly as ES modules in the remote CI;
+- remote Pages CI verifies pagination/import, PKCE age bound, service-worker OAuth no-store behavior, report print sandbox, demo pagination and a standards-compliant Terraform ZIP.
 
 ## Local verification
 
-Clean repository gate:
-- 106 tests PASS
-- 8 live-AWS tests SKIP by explicit guard
-- configured coverage 92.38%
-- M1.5 repository preflight 31 PASS / 0 WARN / 0 FAIL
+Final clean repository gate:
+- **106 tests PASS**
+- **8 live-AWS tests SKIP by explicit guard**
+- configured coverage **92.38%**
+- M1.5 repository preflight **31 PASS / 0 WARN / 0 FAIL**
 - web structural/security check PASS
 - demo smoke + 55-project pagination PASS
 - standards-compliant browser Terraform ZIP PASS
-- manifest: 217 files PASS
+- manifest **218 files PASS**
 - structured JSON/TOML/YAML parsing PASS
 - shell syntax PASS
 - secret-like material scan PASS
-- real local HTTP/CORS/pagination/analysis/IaC/narrative journey PASS
 
-The complete delivery ZIP was then freshly extracted and the full gate passed again: 106 PASS / 8 SKIP / 92.38% / manifest PASS. The standalone web ZIP was also re-extracted; JS syntax, demo pagination and ZIP integrity passed independently.
+The complete delivery ZIP was freshly extracted and the full `make validate` gate passed again with **106 PASS / 8 SKIP / 92.38% / manifest PASS**.
 
 ## GitHub / Pages evidence
 
-Pages repository: ricscar2570/AWSFriendlyCounsellor
+Pages repository: `ricscar2570/AWSFriendlyCounsellor`
 
-Final M2-B.2 source commit:
-`397ae60ef7e108e5832e4c6130f21cc6e2c0773b`
+Final remote CI source commit:
+`c35939470006323e9dc903fc4e26344d35543837`
 
 Web CI:
-- run 37764293744
-- conclusion SUCCESS
+- run `37764761732`
+- conclusion **SUCCESS**
 
 Native GitHub Pages:
-- run 37764291705
-- conclusion SUCCESS
+- run `37764760122`
+- conclusion **SUCCESS**
 
 Environment root reported by GitHub:
 `https://ricscar2570.github.io/AWSFriendlyCounsellor/`
@@ -67,12 +68,13 @@ Environment root reported by GitHub:
 Application path:
 `https://ricscar2570.github.io/AWSFriendlyCounsellor/app/`
 
+The preparation environment could not independently fetch the Pages URL through its generic web-fetch layer, and local Chromium cannot complete headless DOM execution in the container because its DBus runtime is absent. Neither limitation is reported as a browser PASS.
+
 ## Critical lineage finding
 
-The current hardened v3.6.x line does **not** contain every historical AWS Friendly Counsellor capability. Therefore previous wording that the Pages conversion already preserved "all" historical functionality was too strong.
+The current hardened v3.6.x line does **not** contain every historical AWS Friendly Counsellor capability. Previous wording that the Pages conversion had already preserved all historical functionality was therefore too strong.
 
 Before AWS staging, the hardened line must reconcile at least:
-
 - legacy ML-assisted classification/service recommendation;
 - cost simulation/optimization visualizations;
 - interactive charts;
@@ -88,15 +90,15 @@ These features must be recovered from historical sources or equivalently reimple
 
 ## Delivery hashes
 
-- `AWSFC_M2-B.2_DEEP-AUDIT_COMPLETE_APPLICATION_REPOSITORY.zip`
-  SHA-256: `5d10b207db4d626340f519559e43874e747ee81f8bf684fafcc427bcf8c4c137`
-- `AWSFC_M2-B.2_GITHUB_PAGES_WEBAPP.zip`
-  SHA-256: `706f797d3bf44867a6d52d3656ce199cd92d4b2030b1a80d8fa7e1ce8d8e2034`
-- `AWSFC_M2-B.2_EVIDENCE.zip`
-  SHA-256: `d16becde549e84dcfcf04f5141913cc75583b492bd1084ea8c09e50984433402`
+- `AWSFC_M2-B.2_COMPLETE_DEEP_AUDIT_REMEDIATED_REPOSITORY.zip`  
+  SHA-256: `129e416491fca847a1935b6e4f40c8a85f24e79c2851597d75efc3c790a7b9ab`
+- `AWSFC_M2-B.2_GITHUB_PAGES_WEBAPP.zip`  
+  SHA-256: `a3533034fe2197baefb4527a9202ff72f53b0cecaa6fa0dbc5bb8b265fe03875`
+- `AWSFC_M2-B.2_EVIDENCE.zip`  
+  SHA-256: `4afa1f9479148ae945a9f0171cf1bd9b3871fda897a3df8478d0170bba99e31b`
 
 ## Exact next macrostep
 
 **M3-R — Full Historical Functionality Reconciliation.**
 
-The next macrostep must merge/reimplement the historical product/FinOps capabilities into this hardened M2-B.2 baseline, expose them in the web application, add migrations/contracts/tests, and again deliver the entire application. AWS staging remains blocked until that macrostep is locally and remotely green.
+The next macrostep must recover or equivalently reimplement the historical product/FinOps capabilities into this hardened M2-B.2 baseline, expose them in the web application, add additive migrations/contracts/tests, and again deliver the entire application. AWS staging remains blocked until that macrostep is locally and remotely green.
