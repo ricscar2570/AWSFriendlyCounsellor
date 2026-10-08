@@ -1,7 +1,7 @@
 // Runtime defaults for GitHub Pages. Do not put secrets here.
 // Users can override all values from Settings; overrides are stored in the browser.
 window.AWSFC_CONFIG = {
-  webVersion: "M2-B.1",
+  webVersion: "M2-B.2",
   apiBaseUrl: "",
   authMode: "demo",
   tenantId: "",
