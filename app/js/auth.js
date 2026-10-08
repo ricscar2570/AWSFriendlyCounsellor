@@ -27,9 +27,10 @@ export async function beginLogin() {
 
 export async function handleCallback() {
   const s=loadSettings(); if(s.authMode!=='cognito') return false;
-  const q=new URLSearchParams(location.search); const code=q.get('code'); if(!code) return false;
+  const q=new URLSearchParams(location.search); const oauthError=q.get('error');if(oauthError)throw new Error(q.get('error_description')||oauthError);const code=q.get('code'); if(!code) return false;
   const state=q.get('state'); let p={}; try{p=JSON.parse(sessionStorage.getItem(PKCE)||'{}')}catch{}
   if(!p.verifier||!p.state||state!==p.state) throw new Error('Login state validation failed.');
+  if(!p.created_at || Date.now()-Number(p.created_at)>10*60*1000){sessionStorage.removeItem(PKCE);throw new Error('Login request expired. Start sign-in again.');}
   await exchangeToken({grant_type:'authorization_code',client_id:s.cognitoClientId,code,redirect_uri:s.redirectUri,code_verifier:p.verifier});
   sessionStorage.removeItem(PKCE); history.replaceState({},'',location.pathname+'#/dashboard'); return true;
 }
