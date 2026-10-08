@@ -44,8 +44,12 @@ jobs:
           test -f app/manifest.webmanifest
           grep -q 'authMode: "demo"' app/web-config.js
           grep -q "M2-B.1" app/web-config.js
-          if grep -REn --exclude='README.md' '(AKIA|ASIA)[A-Z0-9]{16}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|clientSecret|client_secret[[:space:]]*[:=][[:space:]]*["'\'''][^"'\'']+' app; then
-            echo "Potential secret-like material found in app/"
+          if grep -REn --exclude=README.md '(AKIA|ASIA)[A-Z0-9]{16}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' app; then
+            echo "Potential credential/private-key material found in app/"
+            exit 1
+          fi
+          if grep -REin --exclude=README.md 'client[_-]?secret[[:space:]]*[:=]' app; then
+            echo "Potential client secret assignment found in app/"
             exit 1
           fi
 
