@@ -1,7 +1,7 @@
 import { api } from './api.js';
 import { beginLogin, handleCallback, isSignedIn, logout } from './auth.js';
 import { loadSettings, saveSettings, resetSettings, setTenantId } from './config.js';
-import { $, $, currentRoute, queryParams, routeTo, toast, esc, download, encodeHtmlReport } from './utils.js';
+import { $, $$, currentRoute, queryParams, routeTo, toast, esc, download, encodeHtmlReport } from './utils.js';
 import { zipFiles } from './zip.js';
 import * as V from './views.js';
 
