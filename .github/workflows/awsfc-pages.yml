@@ -1,0 +1,59 @@
+name: AWS Friendly Counsellor Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - ".github/workflows/awsfc-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: awsfc-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Verify static application
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f app/index.html
+          test -f app/js/app.js
+          test -f app/js/views.js
+          test -f app/js/auth.js
+          test -f app/js/api.js
+          test -f app/js/demo.js
+          test -f app/sw.js
+          test -f app/manifest.webmanifest
+          grep -q 'authMode: "demo"' app/web-config.js
+          grep -q "M2-B.1" app/web-config.js
+          if grep -REn --exclude='README.md' '(AKIA|ASIA)[A-Z0-9]{16}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|clientSecret|client_secret[[:space:]]*[:=][[:space:]]*["'\'''][^"'\'']+' app; then
+            echo "Potential secret-like material found in app/"
+            exit 1
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
