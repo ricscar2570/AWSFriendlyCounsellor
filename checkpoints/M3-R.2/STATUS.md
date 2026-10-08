@@ -62,7 +62,7 @@ GitHub Pages:
 - conclusion **SUCCESS**
 - source: provenance-config commit
 
-A final Pages run is also triggered by the cleanup-only main commit; this cleanup deletes only temporary sync transport files and does not alter `app/`.
+Final cleanup-only GitHub Pages run:\n- run `37784139002`\n- conclusion **SUCCESS**\n- source `d9a1eabe280ec2859de4ed8dfe7a09ba7ebf858c`\n\nThe cleanup deleted only temporary sync transport files and did not alter `app/`.
 
 Published application path:
 `https://ricscar2570.github.io/AWSFriendlyCounsellor/app/`
