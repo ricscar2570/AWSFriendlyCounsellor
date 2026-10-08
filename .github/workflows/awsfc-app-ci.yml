@@ -48,9 +48,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in app/js/*.js app/sw.js app/web-config.js app/tests/*.mjs; do
-            node --check "$f"
+          for f in app/js/*.js app/tests/*.mjs; do
+            node --input-type=module --check < "$f"
           done
+          node --check app/sw.js
+          node --check app/web-config.js
 
       - name: Runtime contract smokes
         shell: bash
