@@ -8,7 +8,7 @@ export function loadSettings() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (_) {}
   return {
-    webVersion: base.webVersion || 'M2-B.1',
+    webVersion: base.webVersion || 'M2-B.2',
     apiBaseUrl: cleanUrl(saved.apiBaseUrl ?? base.apiBaseUrl ?? ''),
     authMode: saved.authMode ?? base.authMode ?? 'demo',
     tenantId: saved.tenantId ?? base.tenantId ?? '',
