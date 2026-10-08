@@ -33,8 +33,7 @@ jobs:
           for f in             app/index.html             app/assets/app.css             app/assets/icon.svg             app/web-config.js             app/js/app.js             app/js/api.js             app/js/auth.js             app/js/config.js             app/js/demo.js             app/js/utils.js             app/js/views.js             app/js/zip.js             app/sw.js             app/manifest.webmanifest; do
             test -f "$f"
           done
-          grep -q 'authMode: "demo"' app/web-config.js
-          grep -q 'webVersion: "M3-R.2"' app/web-config.js
+
           grep -q "Content-Security-Policy" app/index.html
           grep -q "connect-src 'self' https:" app/index.html
           grep -q "http://localhost:" app/index.html
@@ -42,6 +41,17 @@ jobs:
           if grep -q "upgrade-insecure-requests" app/index.html; then
             echo "Local debug is incompatible with upgrade-insecure-requests"
             exit 1
+          fi
+
+          if grep -q 'webVersion: "M4-LF1"' app/web-config.js; then
+            grep -q 'authMode: "standalone"' app/web-config.js
+            test -f app/js/standalone.js
+            test -f app/js/vault.js
+            test -f app/tests/standalone-smoke.mjs
+            test -f app/tests/standalone-dispatch-smoke.mjs
+          else
+            grep -q 'webVersion: "M3-R.2"' app/web-config.js
+            grep -q 'authMode: "demo"' app/web-config.js
           fi
 
       - name: JavaScript syntax
@@ -64,6 +74,10 @@ jobs:
           grep -q "url.search" app/sw.js
           grep -q "10\*60\*1000" app/js/auth.js
           node app/tests/demo-smoke.mjs
+          if grep -q 'webVersion: "M4-LF1"' app/web-config.js; then
+            node app/tests/standalone-smoke.mjs
+            node app/tests/standalone-dispatch-smoke.mjs
+          fi
           node app/tests/zip-smoke.mjs
           unzip -t /tmp/awsfc-terraform.zip
 
