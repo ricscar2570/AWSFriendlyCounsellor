@@ -1,0 +1,80 @@
+name: AWS Friendly Counsellor Web CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - ".github/workflows/awsfc-app-ci.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - ".github/workflows/awsfc-app-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: awsfc-web-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Required files and public-safe defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in             app/index.html             app/assets/app.css             app/assets/icon.svg             app/web-config.js             app/js/app.js             app/js/api.js             app/js/auth.js             app/js/config.js             app/js/demo.js             app/js/utils.js             app/js/views.js             app/js/zip.js             app/sw.js             app/manifest.webmanifest; do
+            test -f "$f"
+          done
+          grep -q 'authMode: "demo"' app/web-config.js
+          grep -q 'webVersion: "M2-B.1"' app/web-config.js
+          grep -q "Content-Security-Policy" app/index.html
+          grep -q "connect-src 'self' https:" app/index.html
+
+      - name: JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in app/js/*.js app/sw.js app/web-config.js; do
+            node --check "$f"
+          done
+
+      - name: Service-worker asset closure
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, sys
+          root=Path("app")
+          sw=(root/"sw.js").read_text(encoding="utf-8")
+          assets=re.findall(r"'(\./[^']+)'", sw)
+          missing=[]
+          for item in assets:
+              rel=item[2:]
+              target=root if rel=="" else root/rel
+              if rel and not target.exists():
+                  missing.append(item)
+          if missing:
+              print("Missing service-worker assets:", missing)
+              sys.exit(1)
+          print(f"Service-worker asset closure PASS ({len(assets)} references)")
+
+      - name: Secret-like material scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -REn --exclude=README.md '(AKIA|ASIA)[A-Z0-9]{16}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' app; then
+            echo "Potential credential/private-key material found in app/"
+            exit 1
+          fi
+          if grep -REin --exclude=README.md 'client[_-]?secret[[:space:]]*[:=]' app; then
+            echo "Potential client secret assignment found in app/"
+            exit 1
+          fi
+          echo "Secret-like material scan PASS"
