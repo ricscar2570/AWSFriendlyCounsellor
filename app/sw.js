@@ -1,7 +1,7 @@
 const CACHE = 'awsfc-m3r-2';
 const ASSETS = [
   './','./index.html','./assets/app.css','./assets/icon.svg','./web-config.js',
-  './js/app.js','./js/api.js','./js/auth.js','./js/config.js','./js/demo.js',
+  './js/app.js','./js/api.js','./js/auth.js','./js/config.js','./js/demo.js','./js/standalone.js','./js/vault.js',
   './js/utils.js','./js/views.js','./js/zip.js','./manifest.webmanifest'
 ];
 const STATIC_URLS = new Set(ASSETS.map(path => new URL(path, self.registration.scope).href));

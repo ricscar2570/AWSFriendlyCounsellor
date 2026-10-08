@@ -46,6 +46,6 @@ export async function getBearerToken() {
   if((t.expires_at||0) < Date.now()+60000) t=await refresh().catch(()=>null);
   return t?.id_token || t?.access_token || '';
 }
-export function isSignedIn(){ const s=loadSettings(); return s.authMode==='demo'||s.authMode==='local'||!!loadTokens(); }
+export function isSignedIn(){ const s=loadSettings(); return s.authMode==='standalone'||s.authMode==='demo'||s.authMode==='local'||!!loadTokens(); }
 export function clearTokens(){ sessionStorage.removeItem(TOKENS); sessionStorage.removeItem(PKCE); }
 export function logout(){ const s=loadSettings();clearTokens(); if(s.authMode==='cognito'&&s.cognitoDomain&&s.cognitoClientId){const q=new URLSearchParams({client_id:s.cognitoClientId,logout_uri:s.logoutUri}); location.assign(`${s.cognitoDomain}/logout?${q}`)} else location.hash='#/'; }

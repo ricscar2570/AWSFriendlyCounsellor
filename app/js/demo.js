@@ -2,16 +2,16 @@ import { uid, nowIso } from './utils.js';
 const KEY='awsfc.demo.v2';
 
 const serviceCatalog={
-  'Amazon CloudFront':['edge','CDN','Global content delivery and TLS termination','Static assets and edge caching'],
-  'Amazon API Gateway':['api','API','Managed HTTP API entry point','Public HTTPS APIs'],
-  'AWS Lambda':['compute','Compute','Serverless request and event processing','API and background workers'],
-  'Amazon DynamoDB':['data','Database','Serverless low-latency key-value storage','Tenant-scoped application state'],
-  'Amazon Cognito':['identity','Identity','Managed user authentication','User sign-in and MFA'],
-  'Amazon S3':['storage','Storage','Durable object storage','Uploads, reports and static assets'],
-  'Amazon CloudWatch':['ops','Observability','Metrics, logs and alarms','Operations and alerting'],
-  'AWS WAF':['security','Security','Layer-7 filtering and rate protection','Protect public endpoints'],
-  'Amazon SQS':['queue','Integration','Durable asynchronous queue','Background work and decoupling'],
-  'Amazon RDS':['relational','Database','Managed relational database','Transactional relational workloads']
+  'Amazon CloudFront':['cloudfront','CDN','Global content delivery and TLS termination','Static assets and edge caching'],
+  'Amazon API Gateway':['api-gateway','API','Managed HTTP API entry point','Public HTTPS APIs'],
+  'AWS Lambda':['lambda','Compute','Serverless request and event processing','API and background workers'],
+  'Amazon DynamoDB':['dynamodb','Database','Serverless low-latency key-value storage','Tenant-scoped application state'],
+  'Amazon Cognito':['cognito','Identity','Managed user authentication','User sign-in and MFA'],
+  'Amazon S3':['s3','Storage','Durable object storage','Uploads, reports and static assets'],
+  'Amazon CloudWatch':['cloudwatch','Observability','Metrics, logs and alarms','Operations and alerting'],
+  'AWS WAF':['waf','Security','Layer-7 filtering and rate protection','Protect public endpoints'],
+  'Amazon SQS':['sqs','Integration','Durable asynchronous queue','Background work and decoupling'],
+  'Amazon RDS':['rds','Database','Managed relational database','Transactional relational workloads']
 };
 function empty(){return {tenant:null,memberships:[],projects:[],analyses:{},audit:[],accountEstimates:{},accountEstimateRevisions:{},actualCosts:{},actualCostRevisions:{},privacyRequests:[]}}
 function load(){try{return {...empty(),...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return empty()}}

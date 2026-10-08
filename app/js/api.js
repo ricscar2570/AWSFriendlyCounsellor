@@ -1,9 +1,10 @@
 import { loadSettings } from './config.js';
 import { getBearerToken } from './auth.js';
 import { demoApi } from './demo.js';
+import { standaloneApi } from './standalone.js';
 
 async function request(path,{method='GET',body,tenant=true}={}){
-  const s=loadSettings(); if(s.authMode==='demo') throw new Error('INTERNAL_DEMO_DISPATCH');
+  const s=loadSettings(); if(s.authMode==='demo'||s.authMode==='standalone') throw new Error('INTERNAL_LOCAL_DISPATCH');
   if(!s.apiBaseUrl) throw new Error('API base URL is not configured.');
   const headers={'Accept':'application/json','X-Request-ID':crypto.randomUUID?.()||String(Date.now())};
   if(body!==undefined)headers['Content-Type']='application/json';
@@ -13,11 +14,11 @@ async function request(path,{method='GET',body,tenant=true}={}){
   let r; try{r=await fetch(`${s.apiBaseUrl}${path}`,{method,headers,body:body===undefined?undefined:JSON.stringify(body)})}catch(e){throw Object.assign(new Error(`Cannot reach API: ${e.message}`),{status:0})}
   const data=await r.json().catch(()=>null);if(!r.ok){const detail=data?.error?.message||data?.detail||`HTTP ${r.status}`;const err=new Error(typeof detail==='string'?detail:JSON.stringify(detail));err.status=r.status;err.details=data;throw err} return data;
 }
-function call(demoName,path,opt){const s=loadSettings();return s.authMode==='demo'?demoApi[demoName](...(opt?.demoArgs||[])):request(path,opt)}
+function call(localName,path,opt){const s=loadSettings();if(s.authMode==='standalone')return standaloneApi[localName](...(opt?.demoArgs||[]));if(s.authMode==='demo')return demoApi[localName](...(opt?.demoArgs||[]));return request(path,opt)}
 function query(path,{limit=50,cursor=null}={}){const q=new URLSearchParams();q.set('limit',String(limit));if(cursor)q.set('cursor',cursor);return `${path}?${q}`}
 
 export const api={
-  health:()=>loadSettings().authMode==='demo'?demoApi.health():request('/health/ready',{tenant:false}),
+  health:()=>loadSettings().authMode==='standalone'?standaloneApi.health():loadSettings().authMode==='demo'?demoApi.health():request('/health/ready',{tenant:false}),
   me:()=>call('me','/api/v1/me',{tenant:false}),
   createTenant:p=>call('createTenant','/api/v1/tenants',{method:'POST',body:p,tenant:false,demoArgs:[p]}),
   getTenant:id=>call('getTenant',`/api/v1/tenants/${encodeURIComponent(id)}`,{demoArgs:[id]}),
@@ -52,5 +53,11 @@ export const api={
   importCur2:(id,p)=>call('importCur2',`/api/v1/projects/${encodeURIComponent(id)}/actual-cost-snapshots/import-cur`,{method:'POST',body:p,demoArgs:[id,p]}),
   gamification:id=>call('gamification',`/api/v1/tenants/${encodeURIComponent(id)}/gamification`,{demoArgs:[id]}),
   privacyExport:()=>call('privacyExport','/api/v1/privacy/export'),
-  privacyDelete:()=>call('privacyDelete','/api/v1/privacy/deletion-requests',{method:'POST'})
+  privacyDelete:()=>call('privacyDelete','/api/v1/privacy/deletion-requests',{method:'POST'}),
+  backupExport:()=>loadSettings().authMode==='standalone'?standaloneApi.backupExport():Promise.reject(new Error('Full local backup is available in Standalone mode.')),
+  backupImport:p=>loadSettings().authMode==='standalone'?standaloneApi.backupImport(p):Promise.reject(new Error('Full local restore is available in Standalone mode.')),
+  resetLocalData:()=>loadSettings().authMode==='standalone'?standaloneApi.resetLocalData():Promise.reject(new Error('Local reset is available in Standalone mode.')),
+  storageInfo:()=>loadSettings().authMode==='standalone'?standaloneApi.storageInfo():Promise.resolve({storage:'remote backend',network_required:true}),
+  pricingCatalog:()=>loadSettings().authMode==='standalone'?standaloneApi.pricingCatalog():Promise.reject(new Error('Local pricing catalog is available in Standalone mode.')),
+  importPricingCatalog:p=>loadSettings().authMode==='standalone'?standaloneApi.importPricingCatalog(p):Promise.reject(new Error('Local pricing catalog import is available in Standalone mode.'))
 };

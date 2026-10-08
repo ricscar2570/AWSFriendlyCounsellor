@@ -8,9 +8,9 @@ export function loadSettings() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (_) {}
   return {
-    webVersion: base.webVersion || 'M3-R.2',
+    webVersion: base.webVersion || 'M4-LF1',
     apiBaseUrl: cleanUrl(saved.apiBaseUrl ?? base.apiBaseUrl ?? ''),
-    authMode: saved.authMode ?? base.authMode ?? 'demo',
+    authMode: saved.authMode ?? base.authMode ?? 'standalone',
     tenantId: saved.tenantId ?? base.tenantId ?? '',
     cognitoDomain: cleanUrl(saved.cognitoDomain ?? base.cognitoDomain ?? ''),
     cognitoClientId: saved.cognitoClientId ?? base.cognitoClientId ?? '',

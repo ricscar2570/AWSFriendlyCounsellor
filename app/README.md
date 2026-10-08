@@ -1,12 +1,13 @@
-# AWS Friendly Counsellor Web — M3-R.2
+# AWS Friendly Counsellor Web — M4-LF1 Local-First Standalone
 
-This directory is a dependency-free progressive web application designed for GitHub Pages or any static host. It is not a mockup: every backend capability exposed by API contract 1.13.0 has a browser workflow.
+This directory is a dependency-free progressive web application designed for GitHub Pages or any static host. It is not a mockup: the complete product can run without a backend; API contract 1.13.0 remains available for optional connectors.
 
 ## Modes
 
-- **Demo**: browser-local deterministic simulation. Useful for GitHub Pages previews and offline evaluation. It is visibly labelled and does not claim AWS evidence.
+- **Standalone (default)**: full local-first application. Projects, analyses, FinOps, audit, backup/restore, reports and Terraform work without AWS or any backend.
+- **Demo**: disposable browser-local simulation for evaluation.
 - **Local**: connects to a local/test API using the backend's explicitly guarded debug-identity headers.
-- **Cognito**: Authorization Code + PKCE against a Cognito Hosted UI; tokens live in `sessionStorage`, and the API remains authoritative for RBAC, tenant isolation, audit and persistence.
+- **AWS connector (optional)**: Cognito Authorization Code + PKCE against the existing API when live AWS evidence is desired; tokens live in `sessionStorage`.
 
 No AWS access key, client secret or database credential belongs in this directory.
 
@@ -15,7 +16,7 @@ No AWS access key, client secret or database credential belongs in this director
 From the repository root:
 
 ```bash
-python -m http.server 5173 --directory app
+python -m http.server 5173 --directory apps/web
 ```
 
 Open `http://localhost:5173`. For a local API, set Settings -> Local debug and point the API URL at the running backend. The backend must include the web origin in `ALLOWED_ORIGINS`.
@@ -38,4 +39,6 @@ This checks static structure, secret hygiene, JavaScript syntax, and the browser
 
 This release restores the historical M2.6–M3.4 product surface: hybrid rule/Naive-Bayes advisory classification, three architecture scenarios, ADRs, optimization suggestions, gamification, explicit usage pricing, regional simulations, public Price List provenance, account-aware Pricing Calculator estimate lifecycle, Cost Explorer/CUR actual-cost reconciliation, immutable revisions, GDPR self-service workflows, and SHA-256 provenance report bundles. Live billing integrations remain feature-flagged and account-allowlisted.
 
-Published application: `https://ricscar2570.github.io/AWSFriendlyCounsellor/app/`.
+## M4-LF1 local-first architecture
+
+Standalone mode uses IndexedDB as its primary local vault with a localStorage fallback. Full state can be exported/imported as portable JSON. The embedded pricing snapshot and deterministic advisory engine work offline. Live AWS Price List, Pricing Calculator, Cost Explorer and identity/infrastructure evidence are optional connector functions, not prerequisites for using the application.
