@@ -34,17 +34,36 @@ jobs:
             test -f "$f"
           done
           grep -q 'authMode: "demo"' app/web-config.js
-          grep -q 'webVersion: "M2-B.1"' app/web-config.js
+          grep -q 'webVersion: "M2-B.2"' app/web-config.js
           grep -q "Content-Security-Policy" app/index.html
           grep -q "connect-src 'self' https:" app/index.html
+          grep -q "http://localhost:" app/index.html
+          grep -q "http://127.0.0.1:" app/index.html
+          if grep -q "upgrade-insecure-requests" app/index.html; then
+            echo "Local debug is incompatible with upgrade-insecure-requests"
+            exit 1
+          fi
 
       - name: JavaScript syntax
         shell: bash
         run: |
           set -euo pipefail
-          for f in app/js/*.js app/sw.js app/web-config.js; do
+          for f in app/js/*.js app/sw.js app/web-config.js app/tests/*.mjs; do
             node --check "$f"
           done
+
+      - name: Runtime contract smokes
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Eq "import \{[^}]*queryParams[^}]*\} from './utils\.js';" app/js/app.js
+          grep -q 'sandbox="allow-modals"' app/js/app.js
+          grep -q "cache: 'no-store'" app/sw.js
+          grep -q "url.search" app/sw.js
+          grep -q "10\*60\*1000" app/js/auth.js
+          node app/tests/demo-smoke.mjs
+          node app/tests/zip-smoke.mjs
+          unzip -t /tmp/awsfc-terraform.zip
 
       - name: Service-worker asset closure
         shell: python
