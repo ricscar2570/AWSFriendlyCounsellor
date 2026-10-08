@@ -38,16 +38,6 @@ jobs:
           mkdir -p app
           unzip -q /tmp/awsfc-m3r2.zip -d app
 
-      - name: Align web CI with M3-R.2
-        shell: python
-        run: |
-          from pathlib import Path
-          p=Path(".github/workflows/awsfc-app-ci.yml")
-          text=p.read_text(encoding="utf-8")
-          text=text.replace('webVersion: "M2-B.2"', 'webVersion: "M3-R.2"')
-          if 'webVersion: "M3-R.2"' not in text:
-              raise SystemExit("Could not align web CI version")
-          p.write_text(text,encoding="utf-8")
 
       - name: Verify reconstructed app
         shell: bash
@@ -71,7 +61,7 @@ jobs:
           set -euo pipefail
           git config user.name "riccardo"
           git config user.email "scaringi_riccardo@libero.it"
-          git add app .github/workflows/awsfc-app-ci.yml
+          git add app
           if git diff --cached --quiet; then
             echo "No web changes to commit"
             exit 0
@@ -84,3 +74,5 @@ jobs:
 # retry-after-verify-fix
 
 # retry-with-trace
+
+# retry-without-workflow-write
