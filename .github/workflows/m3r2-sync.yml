@@ -55,7 +55,7 @@ jobs:
           set -euo pipefail
           grep -q 'webVersion: "M3-R.2"' app/web-config.js
           grep -q 'Contract 1.13.0' app/js/views.js
-          grep -q 'GetCostAndUsage' app/README.md
+          grep -q 'Cost Explorer/CUR' app/README.md
           for f in app/js/*.js app/tests/*.mjs; do
             node --input-type=module --check < "$f"
           done
@@ -80,3 +80,5 @@ jobs:
           git push origin HEAD:main
 
 # retry-after-payload-repair
+
+# retry-after-verify-fix
