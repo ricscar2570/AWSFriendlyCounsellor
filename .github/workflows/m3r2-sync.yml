@@ -78,3 +78,5 @@ jobs:
           fi
           git commit -m "Publish AWS Friendly Counsellor M3-R.2 reconciled web app"
           git push origin HEAD:main
+
+# retry-after-payload-repair
