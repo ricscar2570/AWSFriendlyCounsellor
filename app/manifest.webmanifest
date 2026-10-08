@@ -1,0 +1,13 @@
+{
+  "name": "AWS Friendly Counsellor",
+  "short_name": "AWSFC",
+  "description": "Guided AWS architecture, cost, security and infrastructure planning.",
+  "start_url": "./#/dashboard",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#08111f",
+  "theme_color": "#08111f",
+  "icons": [
+    {"src":"./assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
