@@ -1,4 +1,4 @@
-const CACHE = 'awsfc-m5a1-v1';
+const CACHE = 'awsfc-m5a2-v1';
 const ASSETS = [
   './','./index.html','./assets/app.css','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./web-config.js',
   './js/app.js','./js/api.js','./js/auth.js','./js/config.js','./js/demo.js','./js/standalone.js','./js/vault.js',

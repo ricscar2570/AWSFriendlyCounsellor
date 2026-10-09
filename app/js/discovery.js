@@ -1,6 +1,8 @@
 export const DISCOVERY_FORMAT = 'awsfc-aws-discovery';
-export const DISCOVERY_VERSION = 1;
+export const DISCOVERY_VERSION = 2;
+export const SUPPORTED_DISCOVERY_VERSIONS = new Set([1,2]);
 export const MAX_DISCOVERY_RESOURCES = 100000;
+export const MAX_DISCOVERY_RELATIONSHIPS = 250000;
 export const MAX_DISCOVERY_ERRORS = 2000;
 
 const SECRET_KEY = /(secret.?access.?key|access.?key.?id|session.?token|password|authorization|credential|private.?key)/i;
@@ -9,9 +11,11 @@ const SECRET_VALUE = /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b|-----BEGIN (?:RSA |EC |OPENS
 function obj(v){return v && typeof v === 'object' && !Array.isArray(v)}
 function text(v,max=500){return String(v ?? '').trim().slice(0,max)}
 function iso(v){const d=new Date(v);return Number.isFinite(d.getTime())?d.toISOString():null}
+function clone(v){return JSON.parse(JSON.stringify(v))}
+function resourceKey(r){return [text(r.service,80).toLowerCase(),text(r.type,160),text(r.region||'global',80),text(r.id,1024)].join('|')}
 
 function assertNoSecrets(value,path='bundle',depth=0){
-  if(depth>12) throw new Error('Discovery bundle nesting is too deep.');
+  if(depth>14) throw new Error('Discovery bundle nesting is too deep.');
   if(Array.isArray(value)){
     for(let i=0;i<value.length;i++) assertNoSecrets(value[i],`${path}[${i}]`,depth+1);
     return;
@@ -52,8 +56,65 @@ function normalizeResource(r,index){
     name:text(r.name,512)||null,
     state:text(r.state,128)||null,
     tags:normalizeTags(r.tags),
-    metadata:obj(r.metadata)?JSON.parse(JSON.stringify(r.metadata)):{} 
+    metadata:obj(r.metadata)?clone(r.metadata):{}
   };
+}
+
+function normalizeEndpoint(v,label){
+  if(!obj(v)) throw new Error(`Relationship ${label} endpoint is not an object.`);
+  const service=text(v.service,80).toLowerCase(),type=text(v.type,160),id=text(v.id,1024),region=text(v.region||'global',80);
+  if(!service||!type||!id) throw new Error(`Relationship ${label} endpoint requires service, type and id.`);
+  return {service,type,id,region};
+}
+
+function normalizeRelationship(r,index){
+  if(!obj(r)) throw new Error(`Relationship ${index+1} is not an object.`);
+  const source=normalizeEndpoint(r.source,`${index+1} source`);
+  const target=normalizeEndpoint(r.target,`${index+1} target`);
+  const kind=text(r.kind,120).toLowerCase().replace(/[^a-z0-9._-]+/g,'-');
+  if(!kind) throw new Error(`Relationship ${index+1} requires kind.`);
+  return {
+    source,
+    target,
+    kind,
+    confidence:['observed','inferred'].includes(r.confidence)?r.confidence:'observed',
+    evidence:text(r.evidence||'collector metadata',1000),
+    metadata:obj(r.metadata)?clone(r.metadata):{}
+  };
+}
+
+function endpoint(service,type,id,region){return {service,type,id,region:region||'global'}}
+
+function derivedRelationships(resources){
+  const rel=[];
+  const add=(source,target,kind,evidence,confidence='observed',metadata={})=>{
+    if(!source?.service||!source?.type||!source?.id||!target?.service||!target?.type||!target?.id)return;
+    rel.push({source,target,kind,evidence,confidence,metadata});
+  };
+  for(const r of resources){
+    const m=r.metadata||{},src=endpoint(r.service,r.type,r.id,r.region);
+    if(m.vpc_id) add(src,endpoint('ec2','vpc',m.vpc_id,r.region),'member-of-vpc','resource metadata vpc_id');
+    if(m.subnet_id) add(src,endpoint('ec2','subnet',m.subnet_id,r.region),'uses-subnet','resource metadata subnet_id');
+    for(const id of Array.isArray(m.subnet_ids)?m.subnet_ids:[]) add(src,endpoint('ec2','subnet',id,r.region),'uses-subnet','resource metadata subnet_ids');
+    for(const id of Array.isArray(m.security_group_ids)?m.security_group_ids:[]) add(src,endpoint('ec2','security-group',id,r.region),'protected-by-security-group','resource metadata security_group_ids');
+    if(m.db_subnet_group) add(src,endpoint('rds','db-subnet-group',m.db_subnet_group,r.region),'uses-db-subnet-group','RDS DB subnet group metadata');
+    if(m.cluster_arn) add(src,endpoint('ecs','cluster',m.cluster_arn,r.region),'member-of-cluster','ECS service metadata cluster_arn');
+    if(m.load_balancer_arn) add(src,endpoint('elasticloadbalancing','load-balancer',m.load_balancer_arn,r.region),'attached-to-load-balancer','load balancer metadata');
+    for(const o of Array.isArray(m.origins)?m.origins:[]){
+      if(o?.target?.service) add(src,normalizeEndpoint(o.target,'origin'),'routes-to',text(o.evidence||'CloudFront origin metadata',1000),'observed');
+    }
+  }
+  return rel;
+}
+
+function dedupeRelationships(items){
+  const out=new Map();
+  for(const r of items){
+    const x=normalizeRelationship(r,out.size);
+    const key=[resourceKey(x.source),x.kind,resourceKey(x.target)].join('=>');
+    if(!out.has(key)) out.set(key,x);
+  }
+  return [...out.values()];
 }
 
 export function normalizeDiscoveryBundle(input){
@@ -61,7 +122,8 @@ export function normalizeDiscoveryBundle(input){
   if(!obj(parsed)) throw new Error('Discovery bundle must be a JSON object.');
   assertNoSecrets(parsed);
   if(parsed.format!==DISCOVERY_FORMAT) throw new Error(`Unsupported discovery format: ${text(parsed.format)||'(missing)'}`);
-  if(Number(parsed.format_version)!==DISCOVERY_VERSION) throw new Error(`Unsupported discovery format version: ${parsed.format_version}`);
+  const version=Number(parsed.format_version);
+  if(!SUPPORTED_DISCOVERY_VERSIONS.has(version)) throw new Error(`Unsupported discovery format version: ${parsed.format_version}`);
   const account=obj(parsed.account)?parsed.account:{};
   const accountId=text(account.id,32);
   if(!/^\d{12}$/.test(accountId)) throw new Error('Discovery bundle requires a 12-digit AWS account id.');
@@ -72,49 +134,70 @@ export function normalizeDiscoveryBundle(input){
   const dedup=new Map();
   resources.forEach((r,i)=>{
     const item=normalizeResource(r,i);
-    const key=`${item.service}|\u0000${item.type}|\u0000${item.region}|\u0000${item.id}`;
+    const key=resourceKey(item);
     if(!dedup.has(key)) dedup.set(key,item);
   });
+  const normalizedResources=[...dedup.values()];
+  const supplied=Array.isArray(parsed.relationships)?parsed.relationships:[];
+  if(supplied.length>MAX_DISCOVERY_RELATIONSHIPS) throw new Error(`Discovery bundle exceeds ${MAX_DISCOVERY_RELATIONSHIPS} relationships.`);
+  const relationships=dedupeRelationships([...derivedRelationships(normalizedResources),...supplied]);
+  if(relationships.length>MAX_DISCOVERY_RELATIONSHIPS) throw new Error(`Discovery bundle exceeds ${MAX_DISCOVERY_RELATIONSHIPS} normalized relationships.`);
   const errors=(Array.isArray(parsed.errors)?parsed.errors:[]).slice(0,MAX_DISCOVERY_ERRORS).map((e,i)=>{
     if(!obj(e)) return {scope:'unknown',message:text(e,1000),index:i};
     return {scope:text(e.scope||'unknown',300),message:text(e.message||'Unknown discovery error',1200),code:text(e.code,120)||null};
   });
   const regions=[...new Set((Array.isArray(parsed.regions)?parsed.regions:[]).map(x=>text(x,80)).filter(Boolean))].sort();
-  const bundle={
+  return {
     format:DISCOVERY_FORMAT,
-    format_version:DISCOVERY_VERSION,
+    format_version:version,
+    normalized_format_version:DISCOVERY_VERSION,
     collector_version:text(parsed.collector_version||'unknown',80),
     generated_at:generatedAt,
     account:{id:accountId,arn:text(account.arn,2048)||null,partition:text(account.partition||'aws',32)},
     regions,
-    resources:[...dedup.values()],
+    resources:normalizedResources,
+    relationships,
     errors,
     source:'local-readonly-collector'
   };
-  return bundle;
+}
+
+export function buildArchitectureGraph(bundle){
+  const b=normalizeDiscoveryBundle(bundle);
+  const nodes=b.resources.map(r=>({...r,key:resourceKey(r)}));
+  const known=new Map(nodes.map(n=>[n.key,n]));
+  const edges=b.relationships.map((r,index)=>{
+    const source_key=resourceKey(r.source),target_key=resourceKey(r.target);
+    return {...r,id:`edge-${index+1}`,source_key,target_key,source_resolved:known.has(source_key),target_resolved:known.has(target_key)};
+  });
+  const unresolved=edges.filter(e=>!e.source_resolved||!e.target_resolved);
+  return {nodes,edges,unresolved};
 }
 
 export function discoverySummary(bundle){
   const b=normalizeDiscoveryBundle(bundle);
-  const byService={},byRegion={},byType={};
+  const graph=buildArchitectureGraph(b);
+  const byService={},byRegion={},byType={},byRelation={};
   for(const r of b.resources){
     byService[r.service]=(byService[r.service]||0)+1;
     byRegion[r.region]=(byRegion[r.region]||0)+1;
     const k=`${r.service}:${r.type}`;byType[k]=(byType[k]||0)+1;
   }
-  const services=Object.entries(byService).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
-  const regions=Object.entries(byRegion).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
-  const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+  for(const e of graph.edges)byRelation[e.kind]=(byRelation[e.kind]||0)+1;
+  const sort=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
   return {
     account_id:b.account.id,
     generated_at:b.generated_at,
     resource_count:b.resources.length,
-    service_count:services.length,
-    region_count:regions.length,
+    relationship_count:graph.edges.length,
+    unresolved_relationship_count:graph.unresolved.length,
+    service_count:Object.keys(byService).length,
+    region_count:Object.keys(byRegion).length,
     error_count:b.errors.length,
-    services,
-    regions,
-    types
+    services:sort(byService),
+    regions:sort(byRegion),
+    types:sort(byType),
+    relationship_types:sort(byRelation)
   };
 }
 
@@ -127,6 +210,7 @@ export function discoveryFingerprintInput(bundle){
     account:b.account,
     regions:b.regions,
     resources:b.resources,
+    relationships:b.relationships,
     errors:b.errors
   });
 }

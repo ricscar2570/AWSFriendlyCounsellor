@@ -1,4 +1,4 @@
-# AWS Friendly Counsellor Web — M5-A1 Read-Only AWS Discovery
+# AWS Friendly Counsellor Web — M5-A2 Architecture Relationship Discovery
 
 This directory is a dependency-free progressive web application designed for GitHub Pages or any static host. It is not a mockup: the complete product can run without a backend; API contract 1.13.0 remains available for optional connectors.
 
@@ -72,3 +72,12 @@ Example:
 ```bash
 python app/tools/awsfc-discover.py --profile my-readonly-profile --regions eu-central-1,eu-west-1 --output awsfc-discovery.json
 ```
+
+
+## M5-A2 AWS Reality Bridge — architecture relationships
+
+M5-A2 evolves the imported AWS evidence from a flat inventory into an observed relationship graph. Discovery format v2 records explicit edges while the browser can derive safe structural edges from v1/v2 metadata. M5-A1 format-v1 bundles remain importable.
+
+The collector now gathers relationship-bearing metadata for VPC/subnet/security-group attachments, Lambda event sources, API Gateway integrations, S3 notifications, CloudFront origins, Route 53 aliases, ELB target groups, ECS/EKS network placement, RDS subnet/security-group placement, SNS subscriptions, EventBridge targets and WAF associations where the caller has permission. Every edge records a kind and evidence source. Missing permissions remain coverage gaps; unresolved/external targets stay unresolved rather than being fabricated.
+
+The web application exposes an **AWS Discovery & Architecture Graph** view with resource count, relationship count, unresolved-edge count, relationship types and evidence-level edge details. Imported relationships are persisted in the same local vault and therefore participate in backup, encrypted backup and recovery.
