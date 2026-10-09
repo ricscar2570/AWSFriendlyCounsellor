@@ -1,0 +1,11 @@
+const {analyzeKnowledge,knowledgeCatalog,KNOWLEDGE_VERSION}=await import('../js/knowledge.js');
+const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
+const r=analyzeKnowledge('A multi-tenant SaaS web app with login, PostgreSQL, uploads, background jobs, full-text search, sensitive customer data, dashboards and transactional email.');
+assert(r.classifier==='hybrid_rules_nb_v2','hybrid classifier');
+assert(r.ml_probabilities&&Object.keys(r.ml_probabilities).length>=8,'NB probabilities');
+const ids=new Set(r.services.map(x=>x.id));
+for(const id of ['cloudfront','api-gateway','cognito','rds','s3','sqs','opensearch','kms','ses'])assert(ids.has(id),`missing ${id}`);
+assert(r.wellArchitected.length===6,'six pillars');
+assert(r.risks.some(x=>/secret|sensitive/i.test(x.title)),'sensitive-data risk');
+assert(knowledgeCatalog().length>=30,'knowledge catalog breadth');
+console.log('KNOWLEDGE SMOKE PASS',JSON.stringify({version:KNOWLEDGE_VERSION,type:r.project_type,services:r.services.length,risks:r.risks.length,ml:r.ml_primary}));

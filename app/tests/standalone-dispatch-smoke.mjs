@@ -1,5 +1,5 @@
 const local=new Map(),session=new Map();
-globalThis.window={AWSFC_CONFIG:{webVersion:'M4-LF1',authMode:'standalone',apiBaseUrl:'',tenantId:'',cognitoDomain:'',cognitoClientId:'',cognitoScopes:'openid email profile',localSubject:'local-owner',localUsername:'Local Owner'}};
+globalThis.window={AWSFC_CONFIG:{webVersion:'M4-LF2',authMode:'standalone',apiBaseUrl:'',tenantId:'',cognitoDomain:'',cognitoClientId:'',cognitoScopes:'openid email profile',localSubject:'local-owner',localUsername:'Local Owner'}};
 globalThis.location={origin:'https://example.invalid',pathname:'/app/',hash:'',search:'',assign:()=>{throw new Error('navigation not expected')}};
 globalThis.history={replaceState:()=>{}};
 globalThis.localStorage={getItem:k=>local.has(k)?local.get(k):null,setItem:(k,v)=>local.set(k,String(v)),removeItem:k=>local.delete(k)};
