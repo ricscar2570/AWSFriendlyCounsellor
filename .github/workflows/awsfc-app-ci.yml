@@ -1,5 +1,5 @@
 name: AWS Friendly Counsellor Web CI
-# M4-LF2 promotion gate: real-browser local-first/PWA smoke is enforced (router-safe).
+# M5-A1 promotion gate: M4-LF2 hardening plus credential-free read-only AWS discovery.
 
 on:
   push:
@@ -44,7 +44,12 @@ jobs:
             exit 1
           fi
 
-          if grep -q 'webVersion: "M4-LF2"' app/web-config.js; then
+          if grep -q 'webVersion: "M5-A1"' app/web-config.js; then
+            grep -q 'authMode: "standalone"' app/web-config.js
+            for f in               app/js/standalone.js app/js/vault.js app/js/cur-parser.js               app/js/diagnostics.js app/js/knowledge.js app/js/discovery.js               app/tests/standalone-smoke.mjs               app/tests/standalone-dispatch-smoke.mjs               app/tests/vault-hardening-smoke.mjs               app/tests/cur-parser-smoke.mjs               app/tests/diagnostics-smoke.mjs               app/tests/knowledge-smoke.mjs               app/tests/discovery-smoke.mjs               app/tests/browser-smoke.py app/tools/awsfc-discover.py               app/data/pricing-snapshot.json               app/assets/icon-192.png app/assets/icon-512.png; do
+              test -f "$f"
+            done
+          elif grep -q 'webVersion: "M4-LF2"' app/web-config.js; then
             grep -q 'authMode: "standalone"' app/web-config.js
             for f in               app/js/standalone.js app/js/vault.js app/js/cur-parser.js               app/js/diagnostics.js app/js/knowledge.js               app/tests/standalone-smoke.mjs               app/tests/standalone-dispatch-smoke.mjs               app/tests/vault-hardening-smoke.mjs               app/tests/cur-parser-smoke.mjs               app/tests/diagnostics-smoke.mjs               app/tests/knowledge-smoke.mjs               app/tests/browser-smoke.py               app/data/pricing-snapshot.json               app/assets/icon-192.png app/assets/icon-512.png; do
               test -f "$f"
@@ -80,7 +85,15 @@ jobs:
           node app/tests/standalone-smoke.mjs
           node app/tests/standalone-dispatch-smoke.mjs
 
-          if grep -q 'webVersion: "M4-LF2"' app/web-config.js; then
+          if grep -q 'webVersion: "M5-A1"' app/web-config.js; then
+            node app/tests/vault-hardening-smoke.mjs
+            node app/tests/cur-parser-smoke.mjs
+            node app/tests/diagnostics-smoke.mjs
+            node app/tests/knowledge-smoke.mjs
+            node app/tests/discovery-smoke.mjs
+            python -m py_compile app/tools/awsfc-discover.py
+            python app/tools/awsfc-discover.py --help >/dev/null
+          elif grep -q 'webVersion: "M4-LF2"' app/web-config.js; then
             node app/tests/vault-hardening-smoke.mjs
             node app/tests/cur-parser-smoke.mjs
             node app/tests/diagnostics-smoke.mjs
