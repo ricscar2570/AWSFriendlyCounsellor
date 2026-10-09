@@ -1,5 +1,6 @@
 import contextlib
 import http.server
+import json
 import socket
 import socketserver
 import threading
@@ -66,6 +67,30 @@ with server() as base, sync_playwright() as p:
     page.locator("#project-create-form button[type=submit]").click()
     page.wait_for_function("() => location.hash.startsWith('#/project/')")
     assert_true("Browser Gate Project" in page.locator("body").inner_text(), "project persisted")
+
+    page.goto(f"{base}/index.html#/discovery", wait_until="networkidle")
+    page.get_by_role("heading", name="AWS Discovery").wait_for()
+    discovery_payload = {
+        "format": "awsfc-aws-discovery",
+        "format_version": 1,
+        "collector_version": "browser-smoke",
+        "generated_at": "2026-10-09T17:00:00Z",
+        "account": {"id": "123456789012", "arn": "arn:aws:iam::123456789012:role/ReadOnly"},
+        "regions": ["eu-central-1"],
+        "resources": [
+            {"service": "lambda", "type": "function", "id": "browser-smoke", "region": "eu-central-1"},
+            {"service": "s3", "type": "bucket", "id": "browser-smoke-bucket", "region": "global"},
+        ],
+        "errors": [],
+    }
+    page.locator("#discovery-import-form input[type=file]").set_input_files({
+        "name": "awsfc-discovery.json",
+        "mimeType": "application/json",
+        "buffer": json.dumps(discovery_payload).encode("utf-8"),
+    })
+    page.locator("#discovery-import-form button[type=submit]").click()
+    page.get_by_text("123456789012", exact=True).wait_for()
+    assert_true("2 services" in page.locator("body").inner_text(), "discovery inventory persisted")
 
     page.goto(f"{base}/index.html#/data", wait_until="networkidle")
     page.get_by_role("heading", name="Data, Backup & Recovery").wait_for()
