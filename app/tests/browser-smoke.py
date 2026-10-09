@@ -50,12 +50,12 @@ with server() as base, sync_playwright() as p:
         if msg.type == "error" else None,
     )
 
-    page.goto(f"{base}/index.html#/dashboard", wait_until="networkidle")
+    page.goto(f"{base}/index.html#/projects", wait_until="networkidle")
     page.locator("#create-tenant-form input[name=name]").fill("Browser Gate Team")
     page.locator("#create-tenant-form button[type=submit]").click()
     page.wait_for_function("() => location.hash === '#/dashboard'")
-    page.get_by_role("heading", name="Good to see you.").wait_for()
-    assert_true("M4-LF2" in page.locator("body").inner_text() or True, "application rendered")
+    page.locator("h1").filter(has_text="Good to see you").wait_for()
+    assert_true("Standalone health" in page.locator("body").inner_text(), "dashboard rendered")
 
     page.goto(f"{base}/index.html#/projects", wait_until="networkidle")
     page.locator("[data-action=show-project-form]").click()
@@ -77,7 +77,7 @@ with server() as base, sync_playwright() as p:
     # Persistence must survive a normal reload.
     page.goto(f"{base}/index.html#/dashboard", wait_until="networkidle")
     page.reload(wait_until="networkidle")
-    page.get_by_role("heading", name="Good to see you.").wait_for()
+    page.locator("h1").filter(has_text="Good to see you").wait_for()
 
     # PWA resources must be installable/cacheable and support an offline shell reload.
     page.evaluate("() => navigator.serviceWorker.ready.then(() => true)")
@@ -85,7 +85,7 @@ with server() as base, sync_playwright() as p:
     assert_true(page.evaluate("() => !!navigator.serviceWorker.controller"), "service worker controller")
     context.set_offline(True)
     page.reload(wait_until="domcontentloaded")
-    page.get_by_role("heading", name="Good to see you.").wait_for()
+    page.locator("h1").filter(has_text="Good to see you").wait_for()
     context.set_offline(False)
 
     # Ignore Chromium's favicon lookup if any; application errors are not allowed.
