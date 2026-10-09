@@ -1,7 +1,7 @@
 // Runtime defaults for GitHub Pages. Do not put secrets here.
 // Users can override all values from Settings; overrides are stored in the browser.
 window.AWSFC_CONFIG = {
-  webVersion: "M5-A1",
+  webVersion: "M5-A2",
   apiBaseUrl: "",
   authMode: "standalone",
   tenantId: "",
@@ -10,6 +10,6 @@ window.AWSFC_CONFIG = {
   cognitoScopes: "openid email profile",
   localSubject: "local-owner",
   localUsername: "Local Owner",
-  sourceSha: "ec7ad7cb718d5f5eb9d107e32799e7585d57e60c",
-  deploymentChannel: "github-pages-local-first-readonly-discovery"
+  sourceSha: "m5-a2-architecture-relationships",
+  deploymentChannel: "github-pages-local-first-architecture-graph"
 };
