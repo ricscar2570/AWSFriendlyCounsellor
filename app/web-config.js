@@ -10,6 +10,6 @@ window.AWSFC_CONFIG = {
   cognitoScopes: "openid email profile",
   localSubject: "local-owner",
   localUsername: "Local Owner",
-  sourceSha: "8b2b964e072da39d06c579e066595a5004866d50",
+  sourceSha: "07ea9642114b1d5c7cd0a226130f770b436173cb",
   deploymentChannel: "github-pages-local-first"
 };
