@@ -1,4 +1,5 @@
 name: AWS Friendly Counsellor Web CI
+# M4-LF2 promotion gate: the real-browser local-first smoke is mandatory.
 
 on:
   push:
