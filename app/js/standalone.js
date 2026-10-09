@@ -1,4 +1,5 @@
 import { uid, nowIso } from './utils.js';
+import { normalizeDiscoveryBundle, discoverySummary } from './discovery.js';
 import { analyzeKnowledge, serviceByName, KNOWLEDGE_VERSION } from './knowledge.js';
 import {
   loadVault, saveVault, exportVault, importVault, resetVault, vaultInfo,
@@ -6,8 +7,8 @@ import {
   backupStatus, requestPersistentStorage
 } from './vault.js';
 
-const APP_VERSION='3.19.0-m4lf2';
-const WEB_VERSION='M4-LF2';
+const APP_VERSION='3.20.0-m5a1';
+const WEB_VERSION='M5-A1';
 function meta(){return {request_id:uid('local_req'),processing_time_ms:4,timestamp:nowIso(),version:APP_VERSION,contract_version:'1.13.0'}}
 function clone(v){return JSON.parse(JSON.stringify(v))}
 function money(v){return `$${Number(v||0).toFixed(2)}`}
@@ -76,6 +77,9 @@ export const standaloneApi={
   async privacyDelete(){const s=await loadVault(),rid=uid('pdr'),x={request_id:rid,tenant_id:s.tenant?.id||'local',subject:'local-owner',status:'ready_for_local_reset',created_at:nowIso(),updated_at:nowIso(),revision:1,note:'Standalone data is stored only in this browser. Confirm local vault reset to complete erasure; exported backups are outside the application and must be deleted separately.'};s.privacyRequests.push(x);await saveVault(s);return {deletion_request:x,metadata:meta()}},
   async pricingCatalog(){const s=await loadVault();return {catalog:clone(s.pricingCatalog),freshness_state:pricingFreshness(s.pricingCatalog),metadata:meta()}},
   async importPricingCatalog(payload){const s=await loadVault(),p=typeof payload==='string'?JSON.parse(payload):payload,catalog=validateCatalog(p);s.pricingCatalog=catalog;audit(s,'pricing_catalog.imported','pricing_catalog',catalog.version,{freshness_state:pricingFreshness(catalog)});await saveVault(s);return {catalog:clone(catalog),freshness_state:pricingFreshness(catalog),metadata:meta()}},
+  async awsDiscoveryGet(){const s=await loadVault();return {discovery:s.awsDiscovery?clone(s.awsDiscovery):null,summary:s.awsDiscovery?discoverySummary(s.awsDiscovery):null,security_boundary:'Inventory is imported metadata from a credential-free local read-only collector; it is not proof of complete account coverage.',metadata:meta()}},
+  async awsDiscoveryImport(payload){const s=await loadVault();if(!s.tenant)throw Object.assign(new Error('Create a workspace before importing AWS discovery evidence'),{status:409});const bundle=normalizeDiscoveryBundle(payload),summary=discoverySummary(bundle);s.awsDiscovery={...bundle,imported_at:nowIso(),summary};audit(s,'aws_discovery.imported','aws_account',bundle.account.id,{resources:summary.resource_count,services:summary.service_count,regions:summary.region_count,errors:summary.error_count,collector_version:bundle.collector_version});await saveVault(s);return {discovery:clone(s.awsDiscovery),summary,metadata:meta()}},
+  async awsDiscoveryClear(){const s=await loadVault();const old=s.awsDiscovery;s.awsDiscovery=null;if(old)audit(s,'aws_discovery.cleared','aws_account',old.account?.id||'unknown',{resources:old.resources?.length||0});await saveVault(s);return {status:'cleared',metadata:meta()}},
   async backupExport(){return exportVault()},
   async backupExportEncrypted(passphrase){return exportEncryptedVault(passphrase)},
   async backupImport(payload,passphrase=''){const parsed=typeof payload==='string'?JSON.parse(payload):payload,state=parsed?.format==='awsfc-local-backup-encrypted'?await importEncryptedVault(parsed,passphrase):await importVault(parsed);return {status:'imported',tenant_id:state.tenant?.id||null,projects:state.projects.length,metadata:meta()}},

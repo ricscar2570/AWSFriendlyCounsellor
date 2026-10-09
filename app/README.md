@@ -1,4 +1,4 @@
-# AWS Friendly Counsellor Web — M4-LF2 Local-First Hardened
+# AWS Friendly Counsellor Web — M5-A1 Read-Only AWS Discovery
 
 This directory is a dependency-free progressive web application designed for GitHub Pages or any static host. It is not a mockup: the complete product can run without a backend; API contract 1.13.0 remains available for optional connectors.
 
@@ -59,3 +59,16 @@ Standalone mode uses IndexedDB as its primary local vault with a localStorage fa
 
 - standalone pricing fails closed on missing rates/regions, prices explicit transfer paths, and never synthesizes private AWS discounts;
 - CUR imports reject mixed/non-USD currency and rows outside the selected date window; quoted embedded CSV newlines are preserved.
+
+
+## M5-A1 AWS Reality Bridge — read-only discovery
+
+M5-A1 adds a credential-free path from a real AWS account into the local-first application. Download `tools/awsfc-discover.py`, run it locally with an existing AWS CLI profile, and import the generated JSON from **AWS Discovery**. The collector invokes read-only/list/describe AWS APIs and stores metadata only; it never asks for or writes AWS access keys, secret keys, passwords, or session tokens.
+
+The imported bundle is schema-validated, rejects credential-like fields/material, is deduplicated, records partial-coverage errors, is persisted in the local vault, participates in backup/recovery, and is exposed through the API facade as `/api/v1/aws/discovery` for a future authenticated live connector. This milestone is intentionally evidence ingestion, not direct browser-to-AWS access.
+
+Example:
+
+```bash
+python app/tools/awsfc-discover.py --profile my-readonly-profile --regions eu-central-1,eu-west-1 --output awsfc-discovery.json
+```
