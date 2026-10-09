@@ -21,7 +21,7 @@ from typing import Any, Callable
 
 FORMAT = "awsfc-aws-discovery"
 FORMAT_VERSION = 2
-COLLECTOR_VERSION = "2.0.0-m5a2"
+COLLECTOR_VERSION = "2.0.1-m5a2-audit"
 
 
 def run_aws(args: list[str], profile: str | None = None, region: str | None = None) -> dict[str, Any]:
@@ -98,6 +98,34 @@ def lambda_target_from_uri(uri: Any, region: str) -> dict[str, str] | None:
     if str(uri).startswith("arn:"):
         return target_from_arn(str(uri), region)
     return None
+
+
+def api_gateway_target_from_stage_arn(arn: Any, region: str) -> dict[str, str] | None:
+    """Resolve an API Gateway stage ARN to the owning REST API when possible."""
+    value = str(arn or "")
+    match = re.search(r"/restapis/([^/]+)/stages/([^/]+)$", value)
+    if not match:
+        return endpoint("apigateway", "stage-arn", value, region) if value else None
+    target = endpoint("apigateway", "rest-api", match.group(1), region)
+    target["stage"] = match.group(2)
+    return target
+
+
+def elb_target_endpoint(target_type: Any, target_id: Any, region: str) -> dict[str, str] | None:
+    """Map ELBv2 target-health IDs to graph endpoints without inventing resources."""
+    if not target_id:
+        return None
+    target_type = str(target_type or "").lower()
+    target_id = str(target_id)
+    if target_type == "instance":
+        return endpoint("ec2", "instance", target_id, region)
+    if target_type == "lambda":
+        return target_from_arn(target_id, region)
+    if target_type == "alb":
+        return endpoint("elasticloadbalancing", "load-balancer", target_id, region)
+    if target_type == "ip":
+        return endpoint("external", "ip-address", target_id, region)
+    return endpoint("external", "elb-target", target_id, region)
 
 
 def add(resources: list[dict[str, Any]], service: str, rtype: str, rid: Any,
@@ -273,13 +301,34 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
         tgs = run_aws(["elbv2", "describe-target-groups"], profile, region)
         for x in tgs.get("TargetGroups") or []:
             arn = x.get("TargetGroupArn")
+            target_type = x.get("TargetType")
             add(resources, "elasticloadbalancing", "target-group", arn, region, arn=arn, name=x.get("TargetGroupName"),
                 metadata={"vpc_id": x.get("VpcId"), "protocol": x.get("Protocol"), "port": x.get("Port"),
-                          "target_type": x.get("TargetType"), "load_balancer_arns": x.get("LoadBalancerArns") or []})
+                          "target_type": target_type, "load_balancer_arns": x.get("LoadBalancerArns") or []})
             src = endpoint("elasticloadbalancing", "target-group", arn, region)
             for lb in x.get("LoadBalancerArns") or []:
                 relate(relationships, endpoint("elasticloadbalancing", "load-balancer", lb, region), src,
                        "forwards-to", "ELB target group association")
+            if not arn:
+                continue
+            try:
+                health = run_aws(["elbv2", "describe-target-health", "--target-group-arn", arn], profile, region)
+                for row in health.get("TargetHealthDescriptions") or []:
+                    target = row.get("Target") or {}
+                    relate(
+                        relationships,
+                        src,
+                        elb_target_endpoint(target_type, target.get("Id"), region),
+                        "routes-to-target",
+                        "ELB target health registration",
+                        {
+                            "port": target.get("Port"),
+                            "availability_zone": target.get("AvailabilityZone"),
+                            "health_state": (row.get("TargetHealth") or {}).get("State"),
+                        },
+                    )
+            except Exception as exc:
+                errors.append({"scope": f"{region}:elbv2:{arn}:target-health", "message": str(exc)[:2000]})
     safe(elbv2, errors, f"{region}:elbv2")
 
     def lambdas():
@@ -356,11 +405,17 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
                         conf = s.get("networkConfiguration") or {}
                         awsvpc = conf.get("awsvpcConfiguration") or {}
                         sid = s.get("serviceArn") or s.get("serviceName")
+                        target_groups = [lb.get("targetGroupArn") for lb in s.get("loadBalancers") or [] if lb.get("targetGroupArn")]
                         add(resources, "ecs", "service", sid, region, arn=s.get("serviceArn"), name=s.get("serviceName"),
                             state=s.get("status"), metadata={"cluster_arn": arn, "subnet_ids": awsvpc.get("subnets") or [],
-                                                            "security_group_ids": awsvpc.get("securityGroups") or []})
-                        relate(relationships, endpoint("ecs", "service", sid, region), endpoint("ecs", "cluster", arn, region),
+                                                            "security_group_ids": awsvpc.get("securityGroups") or [],
+                                                            "target_group_arns": target_groups})
+                        service_ep = endpoint("ecs", "service", sid, region)
+                        relate(relationships, service_ep, endpoint("ecs", "cluster", arn, region),
                                "member-of-cluster", "ECS service cluster")
+                        for tg in target_groups:
+                            relate(relationships, endpoint("elasticloadbalancing", "target-group", tg, region), service_ep,
+                                   "routes-to-service", "ECS service load balancer configuration")
             except Exception as exc:
                 errors.append({"scope": f"{region}:ecs:{arn}:services", "message": str(exc)[:2000]})
     safe(ecs, errors, f"{region}:ecs")
@@ -498,10 +553,14 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
                     for resource_arn in assoc.get("ResourceArns") or []:
                         if resource_type == "APPLICATION_LOAD_BALANCER":
                             target = endpoint("elasticloadbalancing", "load-balancer", resource_arn, region)
+                            metadata = {"resource_type": resource_type}
                         else:
-                            target = endpoint("apigateway", "stage-arn", resource_arn, region)
+                            target = api_gateway_target_from_stage_arn(resource_arn, region)
+                            metadata = {"resource_type": resource_type, "stage_arn": resource_arn}
+                            if target and target.get("stage"):
+                                metadata["stage"] = target.pop("stage")
                         relate(relationships, target, endpoint("wafv2", "web-acl", rid, region),
-                               "protected-by-waf", "WAFv2 associated resource")
+                               "protected-by-waf", "WAFv2 associated resource", metadata)
                 except Exception as exc:
                     errors.append({"scope": f"{region}:wafv2:{x.get('Name')}:{resource_type}",
                                    "message": str(exc)[:2000]})
