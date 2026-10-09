@@ -59,7 +59,7 @@ jobs:
                   bool(name)
                   and not p.is_absolute()
                   and ".." not in p.parts
-                  and "\\x00" not in name
+                  and "\x00" not in name
               )
 
           def extract_local_stream(raw, destination, scan=False):
@@ -67,10 +67,10 @@ jobs:
               pos = 0
               while True:
                   if scan:
-                      pos = raw.find(b"PK\\x03\\x04", pos)
+                      pos = raw.find(b"PK\x03\x04", pos)
                       if pos < 0:
                           break
-                  elif pos + 4 > len(raw) or raw[pos:pos+4] != b"PK\\x03\\x04":
+                  elif pos + 4 > len(raw) or raw[pos:pos+4] != b"PK\x03\x04":
                       break
 
                   if pos + 30 > len(raw):
