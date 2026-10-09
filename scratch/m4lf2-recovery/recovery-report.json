@@ -203,12 +203,15 @@
       "uncompressed_size": 16132
     },
     {
+      "available_compressed_bytes": 5899,
       "bytes_missing": 7499,
       "compressed_size": 13398,
       "flags": 0,
       "method": 8,
       "name": "js/views.js",
       "offset": 61560,
+      "partial_sha256": "085b5e7690ec5e8e048ba7bab2174c636160b2d717e1b8c191c3045dc520aec6",
+      "partial_uncompressed_bytes": 17306,
       "status": "incomplete-data",
       "uncompressed_size": 48534
     }
