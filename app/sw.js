@@ -1,8 +1,8 @@
-const CACHE = 'awsfc-m4lf2-v2';
+const CACHE = 'awsfc-m5a1-v1';
 const ASSETS = [
   './','./index.html','./assets/app.css','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./web-config.js',
   './js/app.js','./js/api.js','./js/auth.js','./js/config.js','./js/demo.js','./js/standalone.js','./js/vault.js',
-  './js/knowledge.js','./js/cur-parser.js','./js/diagnostics.js','./js/utils.js','./js/views.js','./js/zip.js','./manifest.webmanifest',
+  './js/knowledge.js','./js/cur-parser.js','./js/diagnostics.js','./js/discovery.js','./js/utils.js','./js/views.js','./js/zip.js','./manifest.webmanifest','./tools/awsfc-discover.py',
   './data/pricing-snapshot.json'
 ];
 const STATIC_URLS = new Set(ASSETS.map(path => new URL(path, self.registration.scope).href));
