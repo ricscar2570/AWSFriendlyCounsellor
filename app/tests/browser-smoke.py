@@ -104,6 +104,12 @@ with server() as base, sync_playwright() as p:
     assert_true("3 services" in body, "discovery inventory persisted")
     assert_true("invokes" in body and "Architecture relationships" in body, "relationship graph rendered")
 
+    # Discovery evidence and graph must survive a normal reload before backup/offline tests.
+    page.reload(wait_until="networkidle")
+    persisted_body = page.locator("body").inner_text()
+    assert_true("123456789012" in persisted_body, "discovery account survives reload")
+    assert_true("invokes" in persisted_body, "discovery relationship survives reload")
+
     page.goto(f"{base}/index.html#/data", wait_until="networkidle")
     page.get_by_role("heading", name="Data, Backup & Recovery").wait_for()
     with page.expect_download() as download_info:
