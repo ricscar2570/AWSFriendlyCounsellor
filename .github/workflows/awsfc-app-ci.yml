@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in             app/index.html             app/assets/app.css             app/assets/icon.svg             app/web-config.js             app/js/app.js             app/js/api.js             app/js/auth.js             app/js/config.js             app/js/demo.js             app/js/utils.js             app/js/views.js             app/js/zip.js             app/sw.js             app/manifest.webmanifest; do
+          for f in             app/index.html app/assets/app.css app/assets/icon.svg             app/web-config.js app/js/app.js app/js/api.js app/js/auth.js             app/js/config.js app/js/demo.js app/js/utils.js app/js/views.js             app/js/zip.js app/sw.js app/manifest.webmanifest; do
             test -f "$f"
           done
 
@@ -43,15 +43,16 @@ jobs:
             exit 1
           fi
 
-          if grep -q 'webVersion: "M4-LF1"' app/web-config.js; then
+          if grep -q 'webVersion: "M4-LF2"' app/web-config.js; then
             grep -q 'authMode: "standalone"' app/web-config.js
-            test -f app/js/standalone.js
-            test -f app/js/vault.js
-            test -f app/tests/standalone-smoke.mjs
-            test -f app/tests/standalone-dispatch-smoke.mjs
+            for f in               app/js/standalone.js app/js/vault.js app/js/cur-parser.js               app/js/diagnostics.js app/js/knowledge.js               app/tests/standalone-smoke.mjs               app/tests/standalone-dispatch-smoke.mjs               app/tests/vault-hardening-smoke.mjs               app/tests/cur-parser-smoke.mjs               app/tests/diagnostics-smoke.mjs               app/tests/knowledge-smoke.mjs               app/tests/browser-smoke.py               app/data/pricing-snapshot.json               app/assets/icon-192.png app/assets/icon-512.png; do
+              test -f "$f"
+            done
+          elif grep -q 'webVersion: "M4-LF1"' app/web-config.js; then
+            grep -q 'authMode: "standalone"' app/web-config.js
           else
-            grep -q 'webVersion: "M3-R.2"' app/web-config.js
-            grep -q 'authMode: "demo"' app/web-config.js
+            echo "Unsupported web release"
+            exit 1
           fi
 
       - name: JavaScript syntax
@@ -73,11 +74,18 @@ jobs:
           grep -q "cache: 'no-store'" app/sw.js
           grep -q "url.search" app/sw.js
           grep -q "10\*60\*1000" app/js/auth.js
+
           node app/tests/demo-smoke.mjs
-          if grep -q 'webVersion: "M4-LF1"' app/web-config.js; then
-            node app/tests/standalone-smoke.mjs
-            node app/tests/standalone-dispatch-smoke.mjs
+          node app/tests/standalone-smoke.mjs
+          node app/tests/standalone-dispatch-smoke.mjs
+
+          if grep -q 'webVersion: "M4-LF2"' app/web-config.js; then
+            node app/tests/vault-hardening-smoke.mjs
+            node app/tests/cur-parser-smoke.mjs
+            node app/tests/diagnostics-smoke.mjs
+            node app/tests/knowledge-smoke.mjs
           fi
+
           node app/tests/zip-smoke.mjs
           unzip -t /tmp/awsfc-terraform.zip
 
@@ -113,3 +121,20 @@ jobs:
             exit 1
           fi
           echo "Secret-like material scan PASS"
+
+      - name: Install browser gate
+        if: hashFiles('app/tests/browser-smoke.py') != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check playwright
+          python -m playwright install chromium
+
+      - name: Required real-browser local-first/PWA smoke
+        if: hashFiles('app/tests/browser-smoke.py') != ''
+        env:
+          AWSFC_BROWSER_SMOKE_REQUIRED: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          python app/tests/browser-smoke.py
