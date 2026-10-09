@@ -1,0 +1,31 @@
+{
+  "final_base64_chars": 90000,
+  "final_decoded_bytes": 67500,
+  "final_records": [],
+  "final_source_chunks": [
+    "chunk-00",
+    "chunk-01",
+    "chunk-02",
+    "chunk-03",
+    "chunk-04",
+    "chunk-05a",
+    "chunk-05b",
+    "chunk-06a",
+    "chunk-06b",
+    "chunk-07a",
+    "chunk-07b"
+  ],
+  "old_tail_base64_chars": 39456,
+  "old_tail_decoded_bytes": 29591,
+  "old_tail_records": [],
+  "old_tail_source_chunks": [
+    "chunk-13",
+    "chunk-14",
+    "chunk-15",
+    "chunk-16",
+    "chunk-17",
+    "chunk-18",
+    "chunk-19"
+  ],
+  "purpose": "M4-LF2 deterministic staged-payload recovery"
+}
