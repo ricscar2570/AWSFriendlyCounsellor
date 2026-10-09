@@ -25,6 +25,6 @@ assert.equal(s.error_count,1);
 assert.equal(s.services[0][1],1);
 
 assert.throws(()=>normalizeDiscoveryBundle({...sample,account:{id:'123'}}),/12-digit/);
-assert.throws(()=>normalizeDiscoveryBundle({...sample,accessKeyId:'AKIA0000000000000000'}),/credential-like/i);
+assert.throws(()=>normalizeDiscoveryBundle({...sample,accessKeyId:'AKIA'+'0'.repeat(16)}),/credential-like/i);
 assert.throws(()=>normalizeDiscoveryBundle({...sample,format:'other'}),/Unsupported discovery format/);
 console.log('DISCOVERY SMOKE PASS');
