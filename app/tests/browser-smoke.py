@@ -72,7 +72,7 @@ with server() as base, sync_playwright() as p:
     page.get_by_role("heading", name="AWS Discovery").wait_for()
     discovery_payload = {
         "format": "awsfc-aws-discovery",
-        "format_version": 1,
+        "format_version": 2,
         "collector_version": "browser-smoke",
         "generated_at": "2026-10-09T17:00:00Z",
         "account": {"id": "123456789012", "arn": "arn:aws:iam::123456789012:role/ReadOnly"},
@@ -80,6 +80,16 @@ with server() as base, sync_playwright() as p:
         "resources": [
             {"service": "lambda", "type": "function", "id": "browser-smoke", "region": "eu-central-1"},
             {"service": "s3", "type": "bucket", "id": "browser-smoke-bucket", "region": "global"},
+            {"service": "apigateway", "type": "v2-api", "id": "browser-api", "region": "eu-central-1"},
+        ],
+        "relationships": [
+            {
+                "source": {"service": "apigateway", "type": "v2-api", "id": "browser-api", "region": "eu-central-1"},
+                "target": {"service": "lambda", "type": "function", "id": "browser-smoke", "region": "eu-central-1"},
+                "kind": "invokes",
+                "confidence": "observed",
+                "evidence": "browser smoke integration",
+            }
         ],
         "errors": [],
     }
@@ -90,7 +100,9 @@ with server() as base, sync_playwright() as p:
     })
     page.locator("#discovery-import-form button[type=submit]").click()
     page.get_by_text("123456789012", exact=True).wait_for()
-    assert_true("2 services" in page.locator("body").inner_text(), "discovery inventory persisted")
+    body = page.locator("body").inner_text()
+    assert_true("3 services" in body, "discovery inventory persisted")
+    assert_true("invokes" in body and "Architecture relationships" in body, "relationship graph rendered")
 
     page.goto(f"{base}/index.html#/data", wait_until="networkidle")
     page.get_by_role("heading", name="Data, Backup & Recovery").wait_for()
