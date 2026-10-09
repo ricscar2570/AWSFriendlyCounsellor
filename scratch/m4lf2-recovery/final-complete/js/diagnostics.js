@@ -1,0 +1,11 @@
+const KEY='awsfc.diagnostics.v1';
+const MAX=80;
+function read(){try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[]}catch{return []}}
+function write(rows){try{localStorage.setItem(KEY,JSON.stringify(rows.slice(-MAX)))}catch{}}
+function redactText(value){let s=String(value??'').slice(0,500);s=s.replace(/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g,'[aws-key-redacted]');s=s.replace(/\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi,'Bearer [redacted]');s=s.replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g,'[jwt-redacted]');s=s.replace(/([?&](?:code|state|token|access_token|id_token|refresh_token)=)[^&#\s]+/gi,'$1[redacted]');s=s.replace(/\b(password|passphrase|client[_-]?secret|secret|token|code|state|access_token|id_token|refresh_token)\s*[:=]\s*[^,;\s]+/gi,'$1=[redacted]');return s}
+export function recordDiagnostic(kind,message,context={}){const rows=read();rows.push({at:new Date().toISOString(),kind:redactText(kind).slice(0,32),message:redactText(message),context:sanitize(context)});write(rows)}
+function sanitize(value,depth=0){if(depth>2)return '[depth-limit]';if(value===null||['number','boolean'].includes(typeof value))return value;if(typeof value==='string')return redactText(value).slice(0,300);if(Array.isArray(value))return value.slice(0,20).map(v=>sanitize(v,depth+1));if(typeof value==='object'){const o={};for(const [k,v] of Object.entries(value).slice(0,30)){if(/token|secret|password|passphrase|description|content|body|authorization/i.test(k))o[k]='[redacted]';else o[k]=sanitize(v,depth+1)}return o}return redactText(String(value))}
+export function diagnostics(){return read()}
+export function clearDiagnostics(){try{localStorage.removeItem(KEY)}catch{}}
+export async function diagnosticSnapshot({settings,health,storage}={}){let estimate=null;if(typeof navigator!=='undefined'&&navigator.storage?.estimate){try{estimate=await navigator.storage.estimate()}catch{}}
+return {format:'awsfc-local-diagnostics',version:1,generated_at:new Date().toISOString(),runtime:{webVersion:settings?.webVersion||null,authMode:settings?.authMode||null,online:typeof navigator!=='undefined'?navigator.onLine:null,userAgent:typeof navigator!=='undefined'?redactText(navigator.userAgent):null},health:sanitize(health||null),storage:sanitize({...storage,estimate}),events:read()};}
