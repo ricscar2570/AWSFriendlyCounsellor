@@ -98,10 +98,24 @@ jobs:
                       "uncompressed_size": usize,
                   }
                   if data_end > len(raw):
+                      available = raw[h_end:]
                       rec.update({
                           "status": "incomplete-data",
                           "bytes_missing": data_end - len(raw),
+                          "available_compressed_bytes": len(available),
                       })
+                      if method == 8 and available and safe_name(name):
+                          try:
+                              partial = zlib.decompressobj(-15).decompress(available)
+                              partial_target = destination / (name + ".partial")
+                              partial_target.parent.mkdir(parents=True, exist_ok=True)
+                              partial_target.write_bytes(partial)
+                              rec.update({
+                                  "partial_uncompressed_bytes": len(partial),
+                                  "partial_sha256": hashlib.sha256(partial).hexdigest(),
+                              })
+                          except Exception as exc:
+                              rec["partial_decode_error"] = str(exc)
                       records.append(rec)
                       break
 
