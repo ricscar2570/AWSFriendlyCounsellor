@@ -53,7 +53,7 @@ with server() as base, sync_playwright() as p:
     page.goto(f"{base}/index.html#/dashboard", wait_until="networkidle")
     page.locator("#create-tenant-form input[name=name]").fill("Browser Gate Team")
     page.locator("#create-tenant-form button[type=submit]").click()
-    page.wait_for_url("**/#/dashboard")
+    page.wait_for_function("() => location.hash === '#/dashboard'")
     page.get_by_role("heading", name="Good to see you.").wait_for()
     assert_true("M4-LF2" in page.locator("body").inner_text() or True, "application rendered")
 
@@ -64,7 +64,7 @@ with server() as base, sync_playwright() as p:
         "A browser-gate SaaS workload with login, uploads, background jobs and analytics."
     )
     page.locator("#project-create-form button[type=submit]").click()
-    page.wait_for_url("**/#/project/**")
+    page.wait_for_function("() => location.hash.startsWith('#/project/')")
     assert_true("Browser Gate Project" in page.locator("body").inner_text(), "project persisted")
 
     page.goto(f"{base}/index.html#/data", wait_until="networkidle")
