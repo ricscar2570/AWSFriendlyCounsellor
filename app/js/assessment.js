@@ -57,7 +57,7 @@ function coverageGap(discovery,rule,region){
 
 function buildScope(project,discovery,graph){
   const resources=Array.isArray(discovery?.resources)?discovery.resources:[];
-  const tagCoverageGaps=(Array.isArray(discovery?.errors)?discovery.errors:[]).filter(e=>isTagCoverageScope(e?.scope));
+  const tagCoverageGaps=(Array.isArray(discovery?.errors)?discovery.errors:[]).filter(e=>String(e?.scope||'').toLowerCase().includes('resourcegroupstaggingapi'));
   const tagged=resources.filter(r=>hasProjectTag(r,project.id));
   const allByKey=new Map(resources.map(r=>[keyOf(r),r]));
   if(tagged.length){
