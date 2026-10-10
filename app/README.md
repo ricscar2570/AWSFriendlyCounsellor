@@ -91,4 +91,4 @@ High-confidence project scope is unlocked with the AWS resource tag `AWSFCProjec
 
 The assessment compares Essential, Balanced or Resilient desired scenarios against actual evidence, marks services as observed/candidate/partial/missing/unknown, respects discovery permission gaps, and currently adds stronger evidence-backed findings for public ingress without an observed WAF association, absent project-scoped CloudWatch alarm evidence, resilient-scenario RDS instances with Multi-AZ disabled, and unresolved project topology edges. Findings remain review inputs rather than automatic deployment instructions.
 
-The M5-B page supports JSON export and keeps Standalone mode zero-network after discovery evidence has been imported.
+The M5-B page supports JSON export and keeps Standalone mode zero-network after discovery evidence has been imported. M5-B assessment is intentionally local-first in this release; connector-side Desired-vs-Actual assessment is not yet part of API contract 1.13.0.
