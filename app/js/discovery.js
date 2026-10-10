@@ -34,8 +34,8 @@ function normalizeTags(tags){
   if(!obj(tags)) return {};
   const out={};
   for(const [k,v] of Object.entries(tags).slice(0,100)){
-    const key=text(k,128); if(!key) continue;
-    out[key]=text(v,512);
+    if(String(k).toLowerCase()!=='awsfcprojectid')continue;
+    out.AWSFCProjectId=text(v,256);
   }
   return out;
 }

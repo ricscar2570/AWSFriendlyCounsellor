@@ -54,6 +54,7 @@ export const api={
   gamification:id=>call('gamification',`/api/v1/tenants/${encodeURIComponent(id)}/gamification`,{demoArgs:[id]}),
   privacyExport:()=>call('privacyExport','/api/v1/privacy/export'),
   privacyDelete:()=>call('privacyDelete','/api/v1/privacy/deletion-requests',{method:'POST'}),
+  assessProject:(id,v,scenario='balanced')=>loadSettings().authMode==='standalone'?standaloneApi.assessProject(id,v,scenario):Promise.reject(new Error('M5-B Desired vs Actual currently runs on imported local AWS evidence in Standalone mode; connector-side assessment is not part of API contract 1.13.0 yet.')),
   awsDiscoveryGet:()=>loadSettings().authMode==='standalone'?standaloneApi.awsDiscoveryGet():loadSettings().authMode==='demo'?Promise.resolve({discovery:null,summary:null,security_boundary:'Demo mode does not import real AWS account evidence.'}):request('/api/v1/aws/discovery'),
   awsDiscoveryImport:p=>loadSettings().authMode==='standalone'?standaloneApi.awsDiscoveryImport(p):loadSettings().authMode==='demo'?Promise.reject(new Error('AWS discovery import is disabled in Demo mode.')):request('/api/v1/aws/discovery',{method:'POST',body:p}),
   awsDiscoveryClear:()=>loadSettings().authMode==='standalone'?standaloneApi.awsDiscoveryClear():loadSettings().authMode==='demo'?Promise.reject(new Error('AWS discovery is not persisted in Demo mode.')):request('/api/v1/aws/discovery',{method:'DELETE'}),

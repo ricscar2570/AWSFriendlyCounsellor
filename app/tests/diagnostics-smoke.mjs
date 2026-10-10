@@ -21,7 +21,7 @@ d.recordDiagnostic(
   {authorization:'Bearer hidden',description:'private workload text',safe:'visible'}
 );
 const snap=await d.diagnosticSnapshot({
-  settings:{webVersion:'M5-A2',authMode:'standalone'},
+  settings:{webVersion:'M5-B',authMode:'standalone'},
   health:{status:'healthy'},
   storage:{storage:'IndexedDB'}
 });

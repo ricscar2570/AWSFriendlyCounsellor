@@ -1,5 +1,5 @@
 name: AWS Friendly Counsellor Web CI
-# M5-A2 promotion gate: M5-A1 read-only evidence plus observed architecture relationships.
+# M5-B promotion gate: project-scoped Desired-vs-Actual assessment on top of audited M5-A2 evidence.
 
 on:
   push:
@@ -44,7 +44,12 @@ jobs:
             exit 1
           fi
 
-          if grep -q 'webVersion: "M5-A2"' app/web-config.js; then
+          if grep -q 'webVersion: "M5-B"' app/web-config.js; then
+            grep -q 'authMode: "standalone"' app/web-config.js
+            for f in               app/js/standalone.js app/js/vault.js app/js/cur-parser.js               app/js/diagnostics.js app/js/knowledge.js app/js/discovery.js app/js/assessment.js               app/tests/standalone-smoke.mjs               app/tests/standalone-dispatch-smoke.mjs               app/tests/vault-hardening-smoke.mjs               app/tests/cur-parser-smoke.mjs               app/tests/diagnostics-smoke.mjs               app/tests/knowledge-smoke.mjs               app/tests/discovery-smoke.mjs app/tests/assessment-smoke.mjs               app/tests/browser-smoke.py app/tests/collector-smoke.py app/tools/awsfc-discover.py               app/data/pricing-snapshot.json               app/assets/icon-192.png app/assets/icon-512.png; do
+              test -f "$f"
+            done
+          elif grep -q 'webVersion: "M5-A2"' app/web-config.js; then
             grep -q 'authMode: "standalone"' app/web-config.js
             for f in               app/js/standalone.js app/js/vault.js app/js/cur-parser.js               app/js/diagnostics.js app/js/knowledge.js app/js/discovery.js               app/tests/standalone-smoke.mjs               app/tests/standalone-dispatch-smoke.mjs               app/tests/vault-hardening-smoke.mjs               app/tests/cur-parser-smoke.mjs               app/tests/diagnostics-smoke.mjs               app/tests/knowledge-smoke.mjs               app/tests/discovery-smoke.mjs               app/tests/browser-smoke.py app/tests/collector-smoke.py app/tools/awsfc-discover.py               app/data/pricing-snapshot.json               app/assets/icon-192.png app/assets/icon-512.png; do
               test -f "$f"
@@ -90,7 +95,17 @@ jobs:
           node app/tests/standalone-smoke.mjs
           node app/tests/standalone-dispatch-smoke.mjs
 
-          if grep -q 'webVersion: "M5-A2"' app/web-config.js; then
+          if grep -q 'webVersion: "M5-B"' app/web-config.js; then
+            node app/tests/vault-hardening-smoke.mjs
+            node app/tests/cur-parser-smoke.mjs
+            node app/tests/diagnostics-smoke.mjs
+            node app/tests/knowledge-smoke.mjs
+            node app/tests/discovery-smoke.mjs
+            node app/tests/assessment-smoke.mjs
+            python -m py_compile app/tools/awsfc-discover.py app/tests/collector-smoke.py
+            python app/tests/collector-smoke.py
+            python app/tools/awsfc-discover.py --help >/dev/null
+          elif grep -q 'webVersion: "M5-A2"' app/web-config.js; then
             node app/tests/vault-hardening-smoke.mjs
             node app/tests/cur-parser-smoke.mjs
             node app/tests/diagnostics-smoke.mjs
