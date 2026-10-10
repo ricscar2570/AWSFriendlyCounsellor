@@ -119,7 +119,7 @@ with server() as base, sync_playwright() as p:
     assessment_body = page.locator("body").inner_text()
     assert_true("Project-scoped evidence" in assessment_body, "project-tagged assessment scope")
     assert_true("Public ingress without observed WAF association" in assessment_body, "WAF gap finding rendered")
-    assert_true("Service alignment" in assessment_body, "service alignment rendered")
+    assert_true("Recommended vs observed" in assessment_body, "service alignment rendered")
 
     page.goto(f"{base}/index.html#/data", wait_until="networkidle")
     page.get_by_role("heading", name="Data, Backup & Recovery").wait_for()
