@@ -56,6 +56,16 @@ const waf=gapAssessment.service_alignment.find(x=>x.service_id==='waf');
 assert.equal(waf.status,'unknown','WAF must be unknown when discovery coverage is incomplete');
 assert.ok(!gapAssessment.findings.some(f=>f.id==='waf-public-ingress'),'do not assert WAF gap through AccessDenied');
 
+const tagGapDiscovery=normalizeDiscoveryBundle({
+  ...discovery,
+  errors:[{scope:'eu-central-1:resourcegroupstaggingapi:get-resources',message:'AccessDenied'}]
+});
+const tagGap=buildDesiredVsActual({project,analysisVersion,discovery:tagGapDiscovery,graph:buildArchitectureGraph(tagGapDiscovery),scenario:'balanced'});
+assert.equal(tagGap.scope.mode,'project-tagged');
+assert.equal(tagGap.scope.confidence,'medium','tag-read coverage gap must downgrade scope confidence');
+assert.equal(tagGap.summary.alignment_percent,null);
+assert.equal(tagGap.findings.length,0,'incomplete tag coverage must not assert project-specific gaps');
+
 const noTag=normalizeDiscoveryBundle({
   ...discovery,
   resources:discovery.resources.map(r=>({...r,tags:{}})),
