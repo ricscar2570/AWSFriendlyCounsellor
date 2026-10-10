@@ -66,6 +66,18 @@ assert.equal(tagGap.scope.confidence,'medium','tag-read coverage gap must downgr
 assert.equal(tagGap.summary.alignment_percent,null);
 assert.equal(tagGap.findings.length,0,'incomplete tag coverage must not assert project-specific gaps');
 
+const s3Desired={
+  ...analysisVersion,
+  result:{...analysisVersion.result,scenarios:[{name:'balanced',service_ids:['api-gateway','lambda','s3']}]}
+};
+const s3TagGapDiscovery=normalizeDiscoveryBundle({
+  ...discovery,
+  errors:[{scope:'s3:example-bucket:tags',message:'AccessDenied'}]
+});
+const s3TagGap=buildDesiredVsActual({project,analysisVersion:s3Desired,discovery:s3TagGapDiscovery,graph:buildArchitectureGraph(s3TagGapDiscovery),scenario:'balanced'});
+assert.equal(s3TagGap.scope.confidence,'high','service-specific tag error does not invalidate all tagged evidence');
+assert.equal(s3TagGap.service_alignment.find(x=>x.service_id==='s3').status,'unknown','S3 absence must be unknown when S3 project tags could not be read');
+
 const noTag=normalizeDiscoveryBundle({
   ...discovery,
   resources:discovery.resources.map(r=>({...r,tags:{}})),
