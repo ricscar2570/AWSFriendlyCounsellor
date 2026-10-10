@@ -54,6 +54,16 @@ function coverageGap(discovery,rule,region){
     return !region||s.includes(String(region).toLowerCase())||!/^([a-z]{2}-[a-z0-9-]+-\d):/.test(s);
   });
 }
+function tagCoverageGapForRule(discovery,rule,region){
+  if(!rule)return false;
+  return (Array.isArray(discovery?.errors)?discovery.errors:[]).some(e=>{
+    const s=String(e?.scope||'').toLowerCase();
+    if(!isTagCoverageScope(s)||s.includes('resourcegroupstaggingapi'))return false;
+    const tokenHit=(rule.tokens||[]).some(t=>s.includes(String(t).toLowerCase()));
+    if(!tokenHit)return false;
+    return !region||s.includes(String(region).toLowerCase())||!/^([a-z]{2}-[a-z0-9-]+-\d):/.test(s);
+  });
+}
 
 function buildScope(project,discovery,graph){
   const resources=Array.isArray(discovery?.resources)?discovery.resources:[];
@@ -125,6 +135,9 @@ function serviceAlignment(ids,scope,discovery,project){
     }
     if(coverageGap(discovery,rule,project.region)){
       return {service_id:id,label:rule.label,status:'unknown',confidence:'incomplete',reason:'Relevant discovery calls had coverage gaps, so absence cannot be asserted.',matches:[]};
+    }
+    if(scope.mode==='project-tagged'&&tagCoverageGapForRule(discovery,rule,project.region)){
+      return {service_id:id,label:rule.label,status:'unknown',confidence:'incomplete',reason:'Resource discovery completed, but project-tag evidence for this service could not be read reliably.',matches:[]};
     }
     if(scope.confidence!=='high'){
       return {service_id:id,label:rule.label,status:'unknown',confidence:'low',reason:'No project tag establishes a project-specific evidence boundary; absence in regional/account data is not a reliable gap.',matches:[]};
