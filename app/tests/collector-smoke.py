@@ -84,6 +84,8 @@ def fake_run(args, profile=None, region=None):
             "serviceArn": ECS_SERVICE,
             "serviceName": "web",
             "status": "ACTIVE",
+            "launchType": "FARGATE",
+            "capacityProviderStrategy": [{"capacityProvider": "FARGATE"}],
             "networkConfiguration": {"awsvpcConfiguration": {
                 "subnets": ["subnet-1"],
                 "securityGroups": ["sg-1"],
@@ -119,16 +121,25 @@ def fake_run(args, profile=None, region=None):
         if resource_type == "API_GATEWAY":
             return {"ResourceArns": [API_STAGE]}
         return {"ResourceArns": []}
+    if key[:2] == ("resourcegroupstaggingapi", "get-resources"):
+        return {"ResourceTagMappingList": [{
+            "ResourceARN": ECS_SERVICE,
+            "Tags": [{"Key": "AWSFCProjectId", "Value": "project-1"}],
+        }]}
     raise AssertionError(f"unexpected AWS command: {args}")
 
 
 module.run_aws = fake_run
 resources, relationships, errors = [], [], []
 module.collect_region(resources, relationships, errors, None, REGION)
+module.apply_resource_tags(resources, errors, None, REGION)
 
 assert not errors, errors
 assert any(r["service"] == "ec2" and r["type"] == "instance" and r["id"] == "i-123" for r in resources)
-assert any(r["service"] == "ecs" and r["type"] == "service" and r["id"] == ECS_SERVICE for r in resources)
+ecs_service = next(r for r in resources if r["service"] == "ecs" and r["type"] == "service" and r["id"] == ECS_SERVICE)
+assert ecs_service["metadata"]["launch_type"] == "FARGATE"
+assert "FARGATE" in ecs_service["metadata"]["capacity_providers"]
+assert ecs_service["tags"]["AWSFCProjectId"] == "project-1"
 
 def has(kind, source_service=None, target_service=None, source_id=None, target_id=None):
     for rel in relationships:
