@@ -39,19 +39,25 @@ const RULES={
   cloudwatch:{label:'Amazon CloudWatch',tokens:['cloudwatch'],match:r=>r.service==='cloudwatch'&&['metric-alarm','composite-alarm'].includes(r.type),semantic:'alarm-evidence'}
 };
 
+function isTagCoverageScope(scope=''){
+  const s=String(scope).toLowerCase();
+  return s.includes('resourcegroupstaggingapi')||s.endsWith(':tags')||s.includes(':tags:');
+}
 function coverageGap(discovery,rule,region){
   if(!rule)return true;
   const errors=Array.isArray(discovery?.errors)?discovery.errors:[];
   return errors.some(e=>{
     const s=String(e?.scope||'').toLowerCase();
+    if(isTagCoverageScope(s))return false;
     const tokenHit=(rule.tokens||[]).some(t=>s.includes(String(t).toLowerCase()));
     if(!tokenHit)return false;
-    return !region||s.includes(String(region).toLowerCase())||!/^([a-z]{2}-[a-z]+-\d):/.test(s);
+    return !region||s.includes(String(region).toLowerCase())||!/^([a-z]{2}-[a-z0-9-]+-\d):/.test(s);
   });
 }
 
 function buildScope(project,discovery,graph){
   const resources=Array.isArray(discovery?.resources)?discovery.resources:[];
+  const tagCoverageGaps=(Array.isArray(discovery?.errors)?discovery.errors:[]).filter(e=>isTagCoverageScope(e?.scope));
   const tagged=resources.filter(r=>hasProjectTag(r,project.id));
   const allByKey=new Map(resources.map(r=>[keyOf(r),r]));
   if(tagged.length){
@@ -62,16 +68,20 @@ function buildScope(project,discovery,graph){
         if(allByKey.has(edge.target_key))evidence.add(edge.target_key);
       }
     }
+    const confidence=tagCoverageGaps.length?'medium':'high';
     return {
       mode:'project-tagged',
-      confidence:'high',
+      confidence,
+      tag_coverage_gap_count:tagCoverageGaps.length,
       project_tag_key:PROJECT_TAG_KEY,
       project_tag_value:String(project.id),
       primary_resources:[...primary].map(k=>allByKey.get(k)).filter(Boolean),
       resources:[...evidence].map(k=>allByKey.get(k)).filter(Boolean),
       primary_keys:primary,
       evidence_keys:evidence,
-      reason:'Resources explicitly tagged for this AWS Friendly Counsellor project, plus directly connected AWS resources.'
+      reason:tagCoverageGaps.length
+        ?'Project tags were observed, but some tag-reading calls failed; resources shown are project evidence but absence is not definitive.'
+        :'Resources explicitly tagged for this AWS Friendly Counsellor project, plus directly connected AWS resources.'
     };
   }
   const region=String(project.region||'');
@@ -79,6 +89,7 @@ function buildScope(project,discovery,graph){
   return {
     mode:'regional-account-fallback',
     confidence:'low',
+    tag_coverage_gap_count:tagCoverageGaps.length,
     project_tag_key:PROJECT_TAG_KEY,
     project_tag_value:String(project.id),
     primary_resources:regional,
@@ -237,7 +248,8 @@ export function buildDesiredVsActual({project,analysisVersion,discovery,graph=nu
   const score=scope.confidence==='high'&&assessable?Math.round(((observed+partial*.5)/assessable)*100):null;
   const ageDays=isoAgeDays(discovery.generated_at);
   const limitations=[];
-  if(scope.confidence!=='high')limitations.push(`No resources tagged ${PROJECT_TAG_KEY}=${project.id} were found. Service presence is only candidate account/region evidence and absence is not treated as a project gap.`);
+  if(scope.mode==='regional-account-fallback')limitations.push(`No resources tagged ${PROJECT_TAG_KEY}=${project.id} were found. Service presence is only candidate account/region evidence and absence is not treated as a project gap.`);
+  if(scope.mode==='project-tagged'&&scope.confidence!=='high')limitations.push(`${scope.tag_coverage_gap_count} tag-reading coverage gap(s) prevent a definitive missing-resource assessment even though project tags were observed.`);
   if((discovery.errors||[]).length)limitations.push(`${discovery.errors.length} discovery coverage gap(s) were recorded; affected services are marked unknown rather than missing.`);
   if(ageDays!==null&&ageDays>=7)limitations.push(`Discovery evidence is ${ageDays} day(s) old; refresh it before making deployment or remediation decisions.`);
   if(unknown)limitations.push(`${unknown} desired service(s) cannot currently be verified with this collector/evidence scope.`);
@@ -264,6 +276,7 @@ export function buildDesiredVsActual({project,analysisVersion,discovery,graph=nu
       reason:scope.reason,
       project_tag_key:scope.project_tag_key,
       project_tag_value:scope.project_tag_value,
+      tag_coverage_gap_count:scope.tag_coverage_gap_count||0,
       primary_resource_count:scope.primary_resources.length,
       evidence_resource_count:scope.resources.length
     },
