@@ -147,6 +147,21 @@ def add(resources: list[dict[str, Any]], service: str, rtype: str, rid: Any,
     })
 
 
+def tag_list(rows: Any) -> dict[str, str]:
+    """Normalize common AWS tag list shapes without reading secret/resource payloads."""
+    out: dict[str, str] = {}
+    if isinstance(rows, dict):
+        return {str(k): str(v) for k, v in rows.items()}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        key = row.get("Key", row.get("key"))
+        value = row.get("Value", row.get("value"))
+        if key is not None:
+            out[str(key)] = str(value if value is not None else "")
+    return out
+
+
 def relate(relationships: list[dict[str, Any]], source: dict[str, str] | None,
            target: dict[str, str] | None, kind: str, evidence: str,
            metadata: dict[str, Any] | None = None) -> None:
@@ -217,8 +232,16 @@ def collect_global(resources: list[dict[str, Any]], relationships: list[dict[str
                     bucket_region = "eu-west-1"
             except Exception as exc:
                 errors.append({"scope": f"s3:{bucket}:location", "message": str(exc)[:2000]})
+            bucket_tags = {}
+            try:
+                tag_data = run_aws(["s3api", "get-bucket-tagging", "--bucket", bucket], profile, bucket_region)
+                bucket_tags = tag_list(tag_data.get("TagSet") or [])
+            except Exception as exc:
+                message = str(exc)
+                if "NoSuchTagSet" not in message:
+                    errors.append({"scope": f"s3:{bucket}:tags", "message": message[:2000]})
             add(resources, "s3", "bucket", bucket, "global", arn=f"arn:{partition}:s3:::{bucket}", name=bucket,
-                metadata={"creation_date": x.get("CreationDate"), "bucket_region": bucket_region})
+                tags=bucket_tags, metadata={"creation_date": x.get("CreationDate"), "bucket_region": bucket_region})
             try:
                 n = run_aws(["s3api", "get-bucket-notification-configuration", "--bucket", bucket], profile, bucket_region)
                 src = endpoint("s3", "bucket", bucket, "global")
@@ -251,8 +274,15 @@ def collect_global(resources: list[dict[str, Any]], relationships: list[dict[str
                 origins.append({"id": origin.get("Id"), "domain_name": domain, "target": target,
                                 "evidence": "CloudFront Origins"})
                 relate(relationships, src, target, "routes-to", "CloudFront Origins", {"origin_id": origin.get("Id")})
+            cf_tags = {}
+            if x.get("ARN"):
+                try:
+                    tag_data = run_aws(["cloudfront", "list-tags-for-resource", "--resource", x.get("ARN")], profile, bootstrap_region)
+                    cf_tags = tag_list(((tag_data.get("Tags") or {}).get("Items") or []))
+                except Exception as exc:
+                    errors.append({"scope": f"cloudfront:{x.get('Id')}:tags", "message": str(exc)[:2000]})
             add(resources, "cloudfront", "distribution", x.get("Id"), "global", arn=x.get("ARN"),
-                name=x.get("DomainName"), state=x.get("Status"),
+                name=x.get("DomainName"), state=x.get("Status"), tags=cf_tags,
                 metadata={"enabled": bool(x.get("Enabled")), "http_version": x.get("HttpVersion"),
                           "origins": origins, "web_acl_id": x.get("WebACLId")})
             if x.get("WebACLId"):
@@ -264,8 +294,16 @@ def collect_global(resources: list[dict[str, Any]], relationships: list[dict[str
         data = run_aws(["route53", "list-hosted-zones"], profile, bootstrap_region)
         for x in data.get("HostedZones") or []:
             zid = x.get("Id")
+            r53_tags = {}
+            if zid:
+                try:
+                    tag_data = run_aws(["route53", "list-tags-for-resource", "--resource-type", "hostedzone",
+                                        "--resource-id", str(zid).split("/")[-1]], profile, bootstrap_region)
+                    r53_tags = tag_list(((tag_data.get("ResourceTagSet") or {}).get("Tags") or []))
+                except Exception as exc:
+                    errors.append({"scope": f"route53:{zid}:tags", "message": str(exc)[:2000]})
             add(resources, "route53", "hosted-zone", zid, "global",
-                arn=f"arn:{partition}:route53:::{str(zid or '').lstrip('/')}", name=x.get("Name"),
+                arn=f"arn:{partition}:route53:::{str(zid or '').lstrip('/')}", name=x.get("Name"), tags=r53_tags,
                 metadata={"private_zone": bool((x.get("Config") or {}).get("PrivateZone"))})
             if not zid:
                 continue
@@ -298,6 +336,7 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
                 sg_ids = [g.get("GroupId") for g in x.get("SecurityGroups") or [] if g.get("GroupId")]
                 add(resources, "ec2", "instance", x.get("InstanceId"), region,
                     state=(x.get("State") or {}).get("Name"),
+                    tags=tag_list(x.get("Tags") or []),
                     metadata={"instance_type": x.get("InstanceType"), "vpc_id": x.get("VpcId"),
                               "subnet_id": x.get("SubnetId"), "security_group_ids": sg_ids})
     safe(ec2_instances, errors, f"{region}:ec2:instances")
@@ -312,7 +351,8 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
             data = run_aws(command, profile, region)
             for x in data.get(key) or []:
                 add(resources, "ec2", rtype, x.get(id_key), region,
-                    state=(x.get("State") if rtype == "nat-gateway" else None), metadata=extra(x))
+                    state=(x.get("State") if rtype == "nat-gateway" else None),
+                    tags=tag_list(x.get("Tags") or []), metadata=extra(x))
         safe(collect_simple, errors, f"{region}:{':'.join(command)}")
 
     def elbv2():
@@ -397,13 +437,15 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
             name = x.get("DBSubnetGroupName")
             subnet_ids = [s.get("SubnetIdentifier") for s in x.get("Subnets") or [] if s.get("SubnetIdentifier")]
             add(resources, "rds", "db-subnet-group", name, region, arn=x.get("DBSubnetGroupArn"), name=name,
-                state=x.get("SubnetGroupStatus"), metadata={"vpc_id": x.get("VpcId"), "subnet_ids": subnet_ids})
+                state=x.get("SubnetGroupStatus"), tags=tag_list(x.get("TagList") or []),
+                metadata={"vpc_id": x.get("VpcId"), "subnet_ids": subnet_ids})
         data = run_aws(["rds", "describe-db-instances"], profile, region)
         for x in data.get("DBInstances") or []:
             group = x.get("DBSubnetGroup") or {}
             sg_ids = [g.get("VpcSecurityGroupId") for g in x.get("VpcSecurityGroups") or [] if g.get("VpcSecurityGroupId")]
             add(resources, "rds", "db-instance", x.get("DBInstanceIdentifier"), region, arn=x.get("DBInstanceArn"),
                 name=x.get("DBName") or x.get("DBInstanceIdentifier"), state=x.get("DBInstanceStatus"),
+                tags=tag_list(x.get("TagList") or []),
                 metadata={"engine": x.get("Engine"), "class": x.get("DBInstanceClass"), "multi_az": bool(x.get("MultiAZ")),
                           "vpc_id": group.get("VpcId"), "db_subnet_group": group.get("DBSubnetGroupName"),
                           "security_group_ids": sg_ids})
@@ -411,7 +453,8 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
         for x in data.get("DBClusters") or []:
             sg_ids = [g.get("VpcSecurityGroupId") for g in x.get("VpcSecurityGroups") or [] if g.get("VpcSecurityGroupId")]
             add(resources, "rds", "db-cluster", x.get("DBClusterIdentifier"), region, arn=x.get("DBClusterArn"),
-                state=x.get("Status"), metadata={"engine": x.get("Engine"), "multi_az": bool(x.get("MultiAZ")),
+                state=x.get("Status"), tags=tag_list(x.get("TagList") or []),
+                metadata={"engine": x.get("Engine"), "multi_az": bool(x.get("MultiAZ")),
                                                  "db_subnet_group": x.get("DBSubnetGroup"),
                                                  "security_group_ids": sg_ids})
     safe(rds, errors, f"{region}:rds")
@@ -427,14 +470,15 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
                     batch = arns[start:start+10]
                     if not batch:
                         continue
-                    detail = run_aws(["ecs", "describe-services", "--cluster", arn, "--services", *batch], profile, region)
+                    detail = run_aws(["ecs", "describe-services", "--cluster", arn, "--services", *batch, "--include", "TAGS"], profile, region)
                     for s in detail.get("services") or []:
                         conf = s.get("networkConfiguration") or {}
                         awsvpc = conf.get("awsvpcConfiguration") or {}
                         sid = s.get("serviceArn") or s.get("serviceName")
                         target_groups = [lb.get("targetGroupArn") for lb in s.get("loadBalancers") or [] if lb.get("targetGroupArn")]
                         add(resources, "ecs", "service", sid, region, arn=s.get("serviceArn"), name=s.get("serviceName"),
-                            state=s.get("status"), metadata={"cluster_arn": arn, "subnet_ids": awsvpc.get("subnets") or [],
+                            state=s.get("status"), tags=tag_list(s.get("tags") or []),
+                            metadata={"cluster_arn": arn, "subnet_ids": awsvpc.get("subnets") or [],
                                                             "security_group_ids": awsvpc.get("securityGroups") or [],
                                                             "target_group_arns": target_groups,
                                                             "launch_type": s.get("launchType"),
@@ -459,6 +503,7 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
                 if vpc.get("clusterSecurityGroupId"):
                     sg_ids.append(vpc.get("clusterSecurityGroupId"))
                 add(resources, "eks", "cluster", name, region, arn=detail.get("arn"), name=name, state=detail.get("status"),
+                    tags=tag_list(detail.get("tags") or {}),
                     metadata={"vpc_id": vpc.get("vpcId"), "subnet_ids": vpc.get("subnetIds") or [],
                               "security_group_ids": sorted(set(sg_ids)), "version": detail.get("version")})
             except Exception as exc:
@@ -471,6 +516,7 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
         for x in data.get("items") or []:
             api_id = x.get("id")
             add(resources, "apigateway", "rest-api", api_id, region, name=x.get("name"),
+                tags=tag_list(x.get("tags") or {}),
                 metadata={"endpoint_types": ((x.get("endpointConfiguration") or {}).get("types") or [])})
             if not api_id:
                 continue
@@ -495,6 +541,7 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
         for x in data.get("Items") or []:
             api_id = x.get("ApiId")
             add(resources, "apigateway", "v2-api", api_id, region, name=x.get("Name"),
+                tags=tag_list(x.get("Tags") or {}),
                 metadata={"protocol_type": x.get("ProtocolType"), "api_endpoint": x.get("ApiEndpoint")})
             if not api_id:
                 continue
@@ -520,12 +567,23 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
         q = run_aws(["sqs", "list-queues"], profile, region)
         for url in q.get("QueueUrls") or []:
             name = str(url).rstrip("/").rsplit("/", 1)[-1]
-            add(resources, "sqs", "queue", name, region, name=name, metadata={"queue_url": url})
+            queue_tags = {}
+            try:
+                queue_tags = tag_list((run_aws(["sqs", "list-queue-tags", "--queue-url", url], profile, region).get("Tags") or {}))
+            except Exception as exc:
+                errors.append({"scope": f"{region}:sqs:{name}:tags", "message": str(exc)[:2000]})
+            add(resources, "sqs", "queue", name, region, name=name, tags=queue_tags, metadata={"queue_url": url})
         t = run_aws(["sns", "list-topics"], profile, region)
         for row in t.get("Topics") or []:
             arn = row.get("TopicArn")
             name = str(arn).rsplit(":", 1)[-1] if arn else None
-            add(resources, "sns", "topic", name or arn, region, arn=arn, name=name)
+            topic_tags = {}
+            if arn:
+                try:
+                    topic_tags = tag_list(run_aws(["sns", "list-tags-for-resource", "--resource-arn", arn], profile, region).get("Tags") or [])
+                except Exception as exc:
+                    errors.append({"scope": f"{region}:sns:{name}:tags", "message": str(exc)[:2000]})
+            add(resources, "sns", "topic", name or arn, region, arn=arn, name=name, tags=topic_tags)
         subs = run_aws(["sns", "list-subscriptions"], profile, region)
         for row in subs.get("Subscriptions") or []:
             topic_arn = row.get("TopicArn")
@@ -539,8 +597,14 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
         data = run_aws(["events", "list-rules"], profile, region)
         for rule in data.get("Rules") or []:
             name = rule.get("Name")
+            rule_tags = {}
+            if rule.get("Arn"):
+                try:
+                    rule_tags = tag_list(run_aws(["events", "list-tags-for-resource", "--resource-arn", rule.get("Arn")], profile, region).get("Tags") or [])
+                except Exception as exc:
+                    errors.append({"scope": f"{region}:events:{name}:tags", "message": str(exc)[:2000]})
             add(resources, "eventbridge", "rule", name, region, arn=rule.get("Arn"), name=name, state=rule.get("State"),
-                metadata={"event_bus_name": rule.get("EventBusName") or "default"})
+                tags=rule_tags, metadata={"event_bus_name": rule.get("EventBusName") or "default"})
             if not name:
                 continue
             try:
