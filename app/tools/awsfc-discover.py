@@ -22,6 +22,7 @@ from typing import Any, Callable
 FORMAT = "awsfc-aws-discovery"
 FORMAT_VERSION = 2
 COLLECTOR_VERSION = "2.0.1-m5a2-audit"
+SAFE_TAG_KEYS = {"awsfcprojectid"}
 
 
 def run_aws(args: list[str], profile: str | None = None, region: str | None = None) -> dict[str, Any]:
@@ -148,17 +149,20 @@ def add(resources: list[dict[str, Any]], service: str, rtype: str, rid: Any,
 
 
 def tag_list(rows: Any) -> dict[str, str]:
-    """Normalize common AWS tag list shapes without reading secret/resource payloads."""
+    """Retain only AWSFC project-scoping tags; arbitrary resource tags stay out of evidence."""
     out: dict[str, str] = {}
     if isinstance(rows, dict):
-        return {str(k): str(v) for k, v in rows.items()}
-    for row in rows or []:
-        if not isinstance(row, dict):
+        items = rows.items()
+    else:
+        items = []
+        for row in rows or []:
+            if not isinstance(row, dict):
+                continue
+            items.append((row.get("Key", row.get("key")), row.get("Value", row.get("value"))))
+    for key, value in items:
+        if key is None or str(key).lower() not in SAFE_TAG_KEYS:
             continue
-        key = row.get("Key", row.get("key"))
-        value = row.get("Value", row.get("value"))
-        if key is not None:
-            out[str(key)] = str(value if value is not None else "")
+        out["AWSFCProjectId"] = str(value if value is not None else "")[:256]
     return out
 
 
