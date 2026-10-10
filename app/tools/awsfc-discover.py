@@ -197,11 +197,7 @@ def apply_resource_tags(resources: list[dict[str, Any]], errors: list[dict[str, 
         errors.append({"scope": f"{region}:resourcegroupstaggingapi:get-resources", "message": str(exc)[:2000]})
         return
     by_arn = {
-        str(row.get("ResourceARN")): {
-            str(tag.get("Key")): str(tag.get("Value"))
-            for tag in row.get("Tags") or []
-            if tag.get("Key") is not None
-        }
+        str(row.get("ResourceARN")): tag_list(row.get("Tags") or [])
         for row in data.get("ResourceTagMappingList") or []
         if row.get("ResourceARN")
     }
