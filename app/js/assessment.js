@@ -117,7 +117,8 @@ function serviceAlignment(ids,scope,discovery,project){
     const matches=scope.resources.filter(rule.match);
     const partial=rule.partial?scope.resources.filter(rule.partial):[];
     if(matches.length){
-      return {service_id:id,label:rule.label,status:scope.confidence==='high'?'observed':'candidate',confidence:scope.confidence,reason:scope.confidence==='high'?'Observed inside project-tagged evidence scope.':'Observed in regional/account evidence, but project ownership is not proven.',matches:matches.map(r=>({service:r.service,type:r.type,id:r.id,region:r.region,name:r.name||null}))};
+      const projectScoped=scope.mode==='project-tagged';
+      return {service_id:id,label:rule.label,status:projectScoped?'observed':'candidate',confidence:scope.confidence,reason:projectScoped?'Observed inside project-tagged evidence scope; tag-read gaps may still limit completeness.':'Observed in regional/account evidence, but project ownership is not proven.',matches:matches.map(r=>({service:r.service,type:r.type,id:r.id,region:r.region,name:r.name||null}))};
     }
     if(partial.length){
       return {service_id:id,label:rule.label,status:'partial',confidence:scope.confidence,reason:'Related AWS resources are observed, but the collector evidence does not prove the exact desired variant.',matches:partial.map(r=>({service:r.service,type:r.type,id:r.id,region:r.region,name:r.name||null}))};
