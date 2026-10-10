@@ -130,7 +130,8 @@ def elb_target_endpoint(target_type: Any, target_id: Any, region: str) -> dict[s
 
 def add(resources: list[dict[str, Any]], service: str, rtype: str, rid: Any,
         region: str = "global", arn: Any = None, name: Any = None,
-        state: Any = None, metadata: dict[str, Any] | None = None) -> None:
+        state: Any = None, metadata: dict[str, Any] | None = None,
+        tags: dict[str, Any] | None = None) -> None:
     if rid is None or str(rid).strip() == "":
         return
     resources.append({
@@ -141,6 +142,7 @@ def add(resources: list[dict[str, Any]], service: str, rtype: str, rid: Any,
         "arn": str(arn) if arn else None,
         "name": str(name) if name else None,
         "state": str(state) if state is not None else None,
+        "tags": {str(k): str(v) for k, v in (tags or {}).items()},
         "metadata": metadata or {},
     })
 
@@ -167,6 +169,29 @@ def safe(call: Callable[[], None], errors: list[dict[str, str]], scope: str) -> 
         errors.append({"scope": scope, "message": str(exc)[:2000]})
 
 
+def apply_resource_tags(resources: list[dict[str, Any]], errors: list[dict[str, str]],
+                        profile: str | None, region: str) -> None:
+    """Merge Resource Groups Tagging API metadata onto already discovered ARNs."""
+    try:
+        data = run_aws(["resourcegroupstaggingapi", "get-resources"], profile, region)
+    except Exception as exc:
+        errors.append({"scope": f"{region}:resourcegroupstaggingapi:get-resources", "message": str(exc)[:2000]})
+        return
+    by_arn = {
+        str(row.get("ResourceARN")): {
+            str(tag.get("Key")): str(tag.get("Value"))
+            for tag in row.get("Tags") or []
+            if tag.get("Key") is not None
+        }
+        for row in data.get("ResourceTagMappingList") or []
+        if row.get("ResourceARN")
+    }
+    for resource in resources:
+        arn = resource.get("arn")
+        if arn and arn in by_arn:
+            resource["tags"] = by_arn[arn]
+
+
 def enabled_regions(profile: str | None, bootstrap_region: str) -> list[str]:
     data = run_aws(["ec2", "describe-regions", "--all-regions"], profile, bootstrap_region)
     rows = data.get("Regions") or []
@@ -176,7 +201,8 @@ def enabled_regions(profile: str | None, bootstrap_region: str) -> list[str]:
 
 
 def collect_global(resources: list[dict[str, Any]], relationships: list[dict[str, Any]],
-                   errors: list[dict[str, str]], profile: str | None, bootstrap_region: str) -> None:
+                   errors: list[dict[str, str]], profile: str | None, bootstrap_region: str,
+                   partition: str) -> None:
     def s3():
         data = run_aws(["s3api", "list-buckets"], profile, bootstrap_region)
         for x in data.get("Buckets") or []:
@@ -191,7 +217,7 @@ def collect_global(resources: list[dict[str, Any]], relationships: list[dict[str
                     bucket_region = "eu-west-1"
             except Exception as exc:
                 errors.append({"scope": f"s3:{bucket}:location", "message": str(exc)[:2000]})
-            add(resources, "s3", "bucket", bucket, "global", name=bucket,
+            add(resources, "s3", "bucket", bucket, "global", arn=f"arn:{partition}:s3:::{bucket}", name=bucket,
                 metadata={"creation_date": x.get("CreationDate"), "bucket_region": bucket_region})
             try:
                 n = run_aws(["s3api", "get-bucket-notification-configuration", "--bucket", bucket], profile, bucket_region)
@@ -238,7 +264,8 @@ def collect_global(resources: list[dict[str, Any]], relationships: list[dict[str
         data = run_aws(["route53", "list-hosted-zones"], profile, bootstrap_region)
         for x in data.get("HostedZones") or []:
             zid = x.get("Id")
-            add(resources, "route53", "hosted-zone", zid, "global", name=x.get("Name"),
+            add(resources, "route53", "hosted-zone", zid, "global",
+                arn=f"arn:{partition}:route53:::{str(zid or '').lstrip('/')}", name=x.get("Name"),
                 metadata={"private_zone": bool((x.get("Config") or {}).get("PrivateZone"))})
             if not zid:
                 continue
@@ -409,7 +436,9 @@ def collect_region(resources: list[dict[str, Any]], relationships: list[dict[str
                         add(resources, "ecs", "service", sid, region, arn=s.get("serviceArn"), name=s.get("serviceName"),
                             state=s.get("status"), metadata={"cluster_arn": arn, "subnet_ids": awsvpc.get("subnets") or [],
                                                             "security_group_ids": awsvpc.get("securityGroups") or [],
-                                                            "target_group_arns": target_groups})
+                                                            "target_group_arns": target_groups,
+                                                            "launch_type": s.get("launchType"),
+                                                            "capacity_providers": [x.get("capacityProvider") for x in s.get("capacityProviderStrategy") or [] if x.get("capacityProvider")]})
                         service_ep = endpoint("ecs", "service", sid, region)
                         relate(relationships, service_ep, endpoint("ecs", "cluster", arn, region),
                                "member-of-cluster", "ECS service cluster")
@@ -603,9 +632,15 @@ def main() -> int:
     resources: list[dict[str, Any]] = []
     relationships: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
-    collect_global(resources, relationships, errors, args.profile, args.bootstrap_region)
+    partition = arn_partition(arn)
+    collect_global(resources, relationships, errors, args.profile, args.bootstrap_region, partition)
     for region in regions:
         collect_region(resources, relationships, errors, args.profile, region)
+
+    # Project-scoped Desired-vs-Actual assessment relies on explicit AWS resource tags
+    # when available. Missing tag-read permission is retained as a coverage gap.
+    for region in sorted(set(regions + ["us-east-1"])):
+        apply_resource_tags(resources, errors, args.profile, region)
 
     dedup_resources: dict[str, dict[str, Any]] = {}
     for item in resources:
