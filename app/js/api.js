@@ -54,6 +54,7 @@ export const api={
   gamification:id=>call('gamification',`/api/v1/tenants/${encodeURIComponent(id)}/gamification`,{demoArgs:[id]}),
   privacyExport:()=>call('privacyExport','/api/v1/privacy/export'),
   privacyDelete:()=>call('privacyDelete','/api/v1/privacy/deletion-requests',{method:'POST'}),
+  assessProject:(id,v,scenario='balanced')=>loadSettings().authMode==='standalone'?standaloneApi.assessProject(id,v,scenario):loadSettings().authMode==='demo'?Promise.reject(new Error('Desired vs Actual assessment requires imported AWS evidence and is disabled in Demo mode.')):request(`/api/v1/projects/${encodeURIComponent(id)}/assessments/desired-vs-actual?version=${encodeURIComponent(v)}&scenario=${encodeURIComponent(scenario)}`),
   awsDiscoveryGet:()=>loadSettings().authMode==='standalone'?standaloneApi.awsDiscoveryGet():loadSettings().authMode==='demo'?Promise.resolve({discovery:null,summary:null,security_boundary:'Demo mode does not import real AWS account evidence.'}):request('/api/v1/aws/discovery'),
   awsDiscoveryImport:p=>loadSettings().authMode==='standalone'?standaloneApi.awsDiscoveryImport(p):loadSettings().authMode==='demo'?Promise.reject(new Error('AWS discovery import is disabled in Demo mode.')):request('/api/v1/aws/discovery',{method:'POST',body:p}),
   awsDiscoveryClear:()=>loadSettings().authMode==='standalone'?standaloneApi.awsDiscoveryClear():loadSettings().authMode==='demo'?Promise.reject(new Error('AWS discovery is not persisted in Demo mode.')):request('/api/v1/aws/discovery',{method:'DELETE'}),
