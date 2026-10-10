@@ -90,6 +90,14 @@ jobs:
           grep -q "cache: 'no-store'" app/sw.js
           grep -q "url.search" app/sw.js
           grep -q "10\*60\*1000" app/js/auth.js
+          if grep -REn 'style[[:space:]]*=' app/js app/index.html; then
+            echo "Inline style attributes violate the strict style-src CSP"
+            exit 1
+          fi
+          if grep -REn '<style([ >])' app/js app/index.html; then
+            echo "Inline style blocks violate the strict style-src CSP"
+            exit 1
+          fi
 
           node app/tests/demo-smoke.mjs
           node app/tests/standalone-smoke.mjs
