@@ -124,7 +124,10 @@ def fake_run(args, profile=None, region=None):
     if key[:2] == ("resourcegroupstaggingapi", "get-resources"):
         return {"ResourceTagMappingList": [{
             "ResourceARN": ECS_SERVICE,
-            "Tags": [{"Key": "AWSFCProjectId", "Value": "project-1"}],
+            "Tags": [
+                {"Key": "AWSFCProjectId", "Value": "project-1"},
+                {"Key": "Environment", "Value": "production"},
+            ],
         }]}
     raise AssertionError(f"unexpected AWS command: {args}")
 
@@ -140,6 +143,7 @@ ecs_service = next(r for r in resources if r["service"] == "ecs" and r["type"] =
 assert ecs_service["metadata"]["launch_type"] == "FARGATE"
 assert "FARGATE" in ecs_service["metadata"]["capacity_providers"]
 assert ecs_service["tags"]["AWSFCProjectId"] == "project-1"
+assert set(ecs_service["tags"]) == {"AWSFCProjectId"}
 
 def has(kind, source_service=None, target_service=None, source_id=None, target_id=None):
     for rel in relationships:
