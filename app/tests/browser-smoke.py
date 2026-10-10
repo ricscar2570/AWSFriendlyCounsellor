@@ -67,6 +67,10 @@ with server() as base, sync_playwright() as p:
     page.locator("#project-create-form button[type=submit]").click()
     page.wait_for_function("() => location.hash.startsWith('#/project/')")
     assert_true("Browser Gate Project" in page.locator("body").inner_text(), "project persisted")
+    project_id = page.evaluate("() => location.hash.split('#/project/')[1].split('?')[0]")
+    page.locator("[data-action=run-project-analysis]").click()
+    page.locator(".history button[data-version='1']").wait_for()
+    assert_true("v1" in page.locator("body").inner_text(), "persisted analysis created")
 
     page.goto(f"{base}/index.html#/discovery", wait_until="networkidle")
     page.get_by_role("heading", name="AWS Discovery").wait_for()
@@ -78,9 +82,9 @@ with server() as base, sync_playwright() as p:
         "account": {"id": "123456789012", "arn": "arn:aws:iam::123456789012:role/ReadOnly"},
         "regions": ["eu-central-1"],
         "resources": [
-            {"service": "lambda", "type": "function", "id": "browser-smoke", "region": "eu-central-1"},
-            {"service": "s3", "type": "bucket", "id": "browser-smoke-bucket", "region": "global"},
-            {"service": "apigateway", "type": "v2-api", "id": "browser-api", "region": "eu-central-1"},
+            {"service": "lambda", "type": "function", "id": "browser-smoke", "region": "eu-central-1", "tags": {"AWSFCProjectId": project_id}},
+            {"service": "s3", "type": "bucket", "id": "browser-smoke-bucket", "region": "global", "tags": {"AWSFCProjectId": project_id}},
+            {"service": "apigateway", "type": "v2-api", "id": "browser-api", "region": "eu-central-1", "tags": {"AWSFCProjectId": project_id}},
         ],
         "relationships": [
             {
@@ -109,6 +113,13 @@ with server() as base, sync_playwright() as p:
     persisted_body = page.locator("body").inner_text()
     assert_true("123456789012" in persisted_body, "discovery account survives reload")
     assert_true("invokes" in persisted_body, "discovery relationship survives reload")
+
+    page.goto(f"{base}/index.html#/assessment?project={project_id}&version=1&scenario=balanced", wait_until="networkidle")
+    page.get_by_role("heading", name="Desired vs Actual").wait_for()
+    assessment_body = page.locator("body").inner_text()
+    assert_true("Project-scoped evidence" in assessment_body, "project-tagged assessment scope")
+    assert_true("Public ingress without observed WAF association" in assessment_body, "WAF gap finding rendered")
+    assert_true("Service alignment" in assessment_body, "service alignment rendered")
 
     page.goto(f"{base}/index.html#/data", wait_until="networkidle")
     page.get_by_role("heading", name="Data, Backup & Recovery").wait_for()
